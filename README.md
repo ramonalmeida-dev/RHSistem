@@ -1,73 +1,173 @@
-# Welcome to your Lovable project
+# 🪷 Lotus Recruit Hub
 
-## Project info
+Sistema completo de recrutamento e seleção com backend Supabase e frontend React.
 
-**URL**: https://lovable.dev/projects/d84a90e3-533c-4bd2-8c04-9bbf6b885d6b
+## 🚀 Status do Projeto
 
-## How can I edit this code?
+### ✅ **Backend (95% Concluído)**
+- **14 Edge Functions** implementadas
+- **7 tabelas** criadas no Supabase
+- **Sistema de autenticação** JWT completo
+- **Row Level Security (RLS)** configurado
+- **Relatórios** e estatísticas funcionais
 
-There are several ways of editing your application.
+### ✅ **Frontend (85% Concluído)**
+- **Sistema de autenticação** integrado
+- **Proteção de rotas** implementada
+- **Controle de acesso** granular
+- **Página de clientes** totalmente integrada
+- **Interface moderna** e responsiva
 
-**Use Lovable**
+## 📋 Funcionalidades
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/d84a90e3-533c-4bd2-8c04-9bbf6b885d6b) and start prompting.
+### 🔐 **Autenticação e Controle de Acesso**
+- Login com email/senha
+- JWT tokens com refresh automático
+- Níveis de acesso: Admin e Consultor
+- Proteção de rotas baseada em permissões
 
-Changes made via Lovable will be committed automatically to this repo.
+### 🏢 **Gestão de Clientes**
+- CRUD completo de empresas
+- Validação de CNPJ
+- Histórico de vagas por cliente
+- Status ativo/inativo
 
-**Use your preferred IDE**
+### 💼 **Gestão de Vagas**
+- CRUD completo de vagas
+- Associação com consultores
+- Status: Ativa, Pausada, Fechada
+- Controle de acesso por consultor
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 👥 **Gestão de Candidatos**
+- CRUD com soft delete
+- Candidaturas múltiplas (N:N)
+- Histórico de mudanças de status
+- Avaliação e observações
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 📊 **Relatórios e Estatísticas**
+- Vagas abertas e fechadas
+- Taxa de aprovação por vaga
+- Relatórios financeiros (admin)
+- Estatísticas por consultor
 
-Follow these steps:
+### 📄 **Upload de Arquivos**
+- Currículos em PDF
+- Compressão automática
+- Armazenamento no Supabase Storage
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🛠️ Tecnologias
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Backend
+- **Supabase** - Backend as a Service
+- **PostgreSQL** - Banco de dados
+- **Edge Functions** - APIs serverless
+- **JWT** - Autenticação
+- **Row Level Security** - Controle de acesso
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Frontend
+- **React 18** - Framework principal
+- **TypeScript** - Tipagem estática
+- **Tailwind CSS** - Estilização
+- **React Router** - Roteamento
+- **React Query** - Gerenciamento de estado
+- **Shadcn/ui** - Componentes UI
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+## 📁 Estrutura do Projeto
+
+```
+lotus-recruit-hub/
+├── 📁 src/                          # Frontend React
+│   ├── 📁 components/               # Componentes reutilizáveis
+│   │   ├── 📁 auth/                 # Autenticação
+│   │   ├── 📁 dashboard/            # Dashboard
+│   │   ├── 📁 layout/               # Layout principal
+│   │   ├── 📁 ui/                   # Componentes base
+│   │   └── 📁 [entidades]/          # Componentes específicos
+│   ├── 📁 contexts/                 # Contextos React
+│   ├── 📁 hooks/                    # Hooks customizados
+│   ├── 📁 lib/                      # Utilitários e configurações
+│   ├── 📁 pages/                    # Páginas da aplicação
+│   └── 📁 types/                    # Tipos TypeScript
+├── 📁 supabase/                     # Backend Supabase
+│   ├── 📁 functions/                # Edge Functions
+│   ├── 📁 migrations/               # Migrações do banco
+│   ├── 📁 seed/                     # Dados iniciais
+│   └── config.toml                  # Configuração local
+├── 📁 docs/                         # Documentação
+└── 📄 README.md                     # Este arquivo
+```
+
+## 🚀 Como Executar
+
+### Pré-requisitos
+- Node.js 18+
+- Supabase CLI
+- Conta Supabase
+
+### 1. Configurar Backend
+```bash
+# Instalar Supabase CLI
+npm install -g supabase
+
+# Login no Supabase
+supabase login
+
+# Inicializar projeto
+supabase init
+
+# Configurar variáveis de ambiente
+cp .env.example .env.local
+```
+
+### 2. Configurar Frontend
+```bash
+# Instalar dependências
+npm install
+
+# Configurar variáveis de ambiente
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+
+# Executar em desenvolvimento
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### 3. Deploy das Edge Functions
+```bash
+# Deploy de todas as funções
+supabase functions deploy
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+# Ou função específica
+supabase functions deploy auth-login
+```
 
-**Use GitHub Codespaces**
+## 📚 Documentação
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- [📋 Requisitos do Backend](docs/BACKEND_REQUIREMENTS.md)
+- [🔌 Integração Frontend-Backend](docs/FRONTEND_INTEGRATION.md)
+- [📖 Documentação da API](docs/API_DOCUMENTATION.md)
+- [🏗️ Guia de Desenvolvimento](docs/DEVELOPMENT_GUIDE.md)
 
-## What technologies are used for this project?
+## 🎯 Próximos Passos
 
-This project is built with:
+1. **Configurar Supabase Storage** para currículos
+2. **Criar primeiro usuário admin** no banco
+3. **Integrar páginas restantes** (vagas, candidatos)
+4. **Testes de integração** completos
+5. **Deploy em produção**
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🤝 Contribuição
 
-## How can I deploy this project?
+1. Fork o projeto
+2. Crie uma branch para sua feature
+3. Commit suas mudanças
+4. Push para a branch
+5. Abra um Pull Request
 
-Simply open [Lovable](https://lovable.dev/projects/d84a90e3-533c-4bd2-8c04-9bbf6b885d6b) and click on Share -> Publish.
+## 📄 Licença
 
-## Can I connect a custom domain to my Lovable project?
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+**Desenvolvido com ❤️ para otimizar processos de recrutamento e seleção** 

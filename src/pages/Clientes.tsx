@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,8 @@ import {
   Mail, 
   Phone,
   MapPin,
-  Calendar
+  Calendar,
+  Loader2
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,52 +21,286 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AddClienteModal } from "@/components/clientes/AddClienteModal";
+import { EditClienteModal } from "@/components/clientes/EditClienteModal";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
-const mockClientes = [
-  {
-    id: 1,
-    razaoSocial: "TechCorp Desenvolvimento Ltda",
-    cnpj: "12.345.678/0001-90",
-    email: "contato@techcorp.com.br",
-    telefone: "(11) 99999-9999",
-    endereco: "São Paulo, SP",
-    prazoPagamento: "30 dias",
-    status: "ativo",
-    ultimaVaga: "2024-01-15",
-    totalVagas: 12
-  },
-  {
-    id: 2,
-    razaoSocial: "StartupXYZ Inovação S.A.",
-    cnpj: "98.765.432/0001-10",
-    email: "rh@startupxyz.com",
-    telefone: "(11) 88888-8888",
-    endereco: "Rio de Janeiro, RJ",
-    prazoPagamento: "15 dias",
-    status: "ativo",
-    ultimaVaga: "2024-01-10",
-    totalVagas: 8
-  },
-  {
-    id: 3,
-    razaoSocial: "MegaCorp Soluções Empresariais",
-    cnpj: "11.222.333/0001-44",
-    email: "jobs@megacorp.com.br",
-    telefone: "(11) 77777-7777",
-    endereco: "Brasília, DF",
-    prazoPagamento: "45 dias",
-    status: "inativo",
-    ultimaVaga: "2023-11-20",
-    totalVagas: 25
-  }
-];
+// Interface baseada no backend
+interface Cliente {
+  id: string;
+  razao_social: string;
+  cnpj: string;
+  inscricao_estadual?: string;
+  endereco_completo?: string;
+  prazo_pagamento?: string;
+  contato?: string;
+  celular?: string;
+  email?: string;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 const Clientes = () => {
-  const getStatusBadge = (status: string) => {
-    return status === "ativo" 
-      ? <Badge className="bg-success text-success-foreground">Ativo</Badge>
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const { toast } = useToast();
+
+  // Carregar clientes
+  const loadClientes = async () => {
+    try {
+      console.log("Iniciando carregamento de clientes...");
+      setIsLoading(true);
+      
+      // Usar diretamente o Supabase client
+      const { data, error } = await supabase
+        .from('clientes')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      console.log("Resultado da consulta:", { data, error });
+      
+      if (error) {
+        console.error("Erro na consulta:", error);
+        toast({
+          title: "Erro ao carregar clientes",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        console.log("Clientes carregados:", data);
+        setClientes(data || []);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar clientes:", error);
+      toast({
+        title: "Erro ao carregar clientes",
+        description: "Erro interno do servidor",
+        variant: "destructive",
+      });
+    } finally {
+      console.log("Finalizando carregamento, isLoading = false");
+      setIsLoading(false);
+    }
+  };
+
+  // Criar novo cliente
+  const handleAddCliente = async (clienteData: any) => {
+    try {
+      console.log("Dados recebidos do modal:", clienteData);
+      
+      // Mapear dados do modal para o formato esperado pelo backend
+      const mappedData = {
+        razao_social: clienteData.razaoSocial,
+        cnpj: clienteData.cnpj,
+        inscricao_estadual: clienteData.inscricaoEstadual,
+        endereco_completo: clienteData.endereco,
+        prazo_pagamento: clienteData.prazoPagamento,
+        contato: clienteData.contato,
+        celular: clienteData.celular,
+        email: clienteData.email,
+        ativo: true
+      };
+
+      console.log("Dados mapeados para inserção:", mappedData);
+
+      const { data, error } = await supabase
+        .from('clientes')
+        .insert(mappedData)
+        .select()
+        .single();
+      
+      console.log("Resultado da inserção:", { data, error });
+      
+      if (error) {
+        console.error("Erro na inserção:", error);
+        toast({
+          title: "Erro ao criar cliente",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        console.log("Cliente criado com sucesso:", data);
+        toast({
+          title: "Cliente criado com sucesso",
+          description: `${clienteData.razaoSocial} foi adicionado à carteira`,
+        });
+        setIsAddModalOpen(false);
+        loadClientes(); // Recarregar lista
+      }
+    } catch (error) {
+      console.error("Erro ao criar cliente:", error);
+      toast({
+        title: "Erro ao criar cliente",
+        description: "Erro interno do servidor",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Editar cliente
+  const handleEditCliente = async (clienteData: any) => {
+    if (!selectedCliente) return;
+    
+    try {
+      // Mapear dados do modal para o formato esperado pelo backend
+      const mappedData = {
+        id: selectedCliente.id,
+        razao_social: clienteData.razaoSocial,
+        cnpj: clienteData.cnpj,
+        inscricao_estadual: clienteData.inscricaoEstadual,
+        endereco_completo: clienteData.endereco,
+        prazo_pagamento: clienteData.prazoPagamento,
+        contato: clienteData.contato,
+        celular: clienteData.celular,
+        email: clienteData.email,
+        ativo: selectedCliente.ativo
+      };
+
+      const { data, error } = await supabase
+        .from('clientes')
+        .update(mappedData)
+        .eq('id', selectedCliente.id)
+        .select()
+        .single();
+      
+      if (error) {
+        toast({
+          title: "Erro ao atualizar cliente",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Cliente atualizado com sucesso",
+          description: `${clienteData.razaoSocial} foi atualizado`,
+        });
+        setIsEditModalOpen(false);
+        setSelectedCliente(null);
+        loadClientes(); // Recarregar lista
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao atualizar cliente",
+        description: "Erro interno do servidor",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Excluir cliente
+  const handleDeleteCliente = async (cliente: Cliente) => {
+    if (!confirm(`Tem certeza que deseja excluir o cliente "${cliente.razao_social}"?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('clientes')
+        .delete()
+        .eq('id', cliente.id);
+      
+      if (error) {
+        toast({
+          title: "Erro ao excluir cliente",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Cliente excluído com sucesso",
+          description: `${cliente.razao_social} foi removido da carteira`,
+        });
+        loadClientes(); // Recarregar lista
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao excluir cliente",
+        description: "Erro interno do servidor",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Abrir modal de edição
+  const openEditModal = (cliente: Cliente) => {
+    setSelectedCliente(cliente);
+    setIsEditModalOpen(true);
+  };
+
+  // Função para remover máscaras
+  const removeMasks = (text: string) => {
+    return text.replace(/[^\w\s]/g, '').toLowerCase();
+  };
+
+  // Filtrar clientes
+  const filteredClientes = clientes.filter(cliente => {
+    const searchTermClean = removeMasks(searchTerm);
+    
+    // Buscar na razão social
+    const razaoSocialClean = removeMasks(cliente.razao_social);
+    if (razaoSocialClean.includes(searchTermClean)) return true;
+    
+    // Buscar no CNPJ (com e sem máscara)
+    const cnpjClean = removeMasks(cliente.cnpj);
+    if (cnpjClean.includes(searchTermClean)) return true;
+    
+    // Buscar no email
+    if (cliente.email && removeMasks(cliente.email).includes(searchTermClean)) return true;
+    
+    // Buscar no contato
+    if (cliente.contato && removeMasks(cliente.contato).includes(searchTermClean)) return true;
+    
+    // Buscar no celular
+    if (cliente.celular && removeMasks(cliente.celular).includes(searchTermClean)) return true;
+    
+    return false;
+  });
+
+  // Paginação
+  const totalPages = Math.ceil(filteredClientes.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedClientes = filteredClientes.slice(startIndex, endIndex);
+
+  // Resetar página quando mudar a busca
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    loadClientes();
+  }, []);
+
+  const getStatusBadge = (ativo: boolean) => {
+    return ativo 
+      ? <Badge className="bg-green-100 text-green-800">Ativo</Badge>
       : <Badge variant="secondary">Inativo</Badge>;
   };
+
+  const formatCNPJ = (cnpj: string) => {
+    return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+  };
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Carregando clientes...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -74,10 +310,14 @@ const Clientes = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground">Clientes</h1>
             <p className="text-muted-foreground">
-              Gerencie sua carteira de clientes
+              Gerencie sua carteira de clientes ({filteredClientes.length} clientes)
+              {searchTerm && ` - ${paginatedClientes.length} resultados na página atual`}
             </p>
           </div>
-          <Button className="bg-gradient-primary hover:opacity-90">
+          <Button 
+            className="bg-gradient-primary hover:opacity-90"
+            onClick={() => setIsAddModalOpen(true)}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Novo Cliente
           </Button>
@@ -85,126 +325,178 @@ const Clientes = () => {
 
         {/* Filters */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por razão social, CNPJ, email..."
-                  className="pl-10"
-                />
+          <CardHeader>
+            <CardTitle>Filtros</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por razão social, CNPJ, email, contato ou celular..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
-              <Button variant="outline">
-                Filtros Avançados
-              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Stats Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-primary">24</div>
-              <p className="text-sm text-muted-foreground">Total de Clientes</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-success">18</div>
-              <p className="text-sm text-muted-foreground">Clientes Ativos</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-warning">6</div>
-              <p className="text-sm text-muted-foreground">Clientes Inativos</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-primary">45</div>
-              <p className="text-sm text-muted-foreground">Vagas Ativas</p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Clientes List */}
+        <Card>
+          <CardContent className="p-0">
+            {filteredClientes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Nenhum cliente encontrado</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  {searchTerm 
+                    ? "Nenhum cliente corresponde aos critérios de busca."
+                    : "Comece adicionando seu primeiro cliente."
+                  }
+                </p>
+                {!searchTerm && (
+                  <Button onClick={() => setIsAddModalOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Cliente
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left p-3 font-medium">Razão Social</th>
+                        <th className="text-left p-3 font-medium">CNPJ</th>
+                        <th className="text-left p-3 font-medium">Contato</th>
+                        <th className="text-left p-3 font-medium">Email</th>
+                        <th className="text-left p-3 font-medium">Status</th>
+                        <th className="text-left p-3 font-medium w-20">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedClientes.map((cliente, index) => (
+                        <tr 
+                          key={cliente.id} 
+                          className={`border-b hover:bg-muted/30 transition-colors ${
+                            index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                          }`}
+                        >
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-primary" />
+                              <span className="font-medium">{cliente.razao_social}</span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-sm text-muted-foreground">
+                            {formatCNPJ(cliente.cnpj)}
+                          </td>
+                          <td className="p-3 text-sm">
+                            <div>
+                              <div className="font-medium">{cliente.contato}</div>
+                              {cliente.celular && (
+                                <div className="text-muted-foreground text-xs">{cliente.celular}</div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3 text-sm text-muted-foreground">
+                            {cliente.email || '-'}
+                          </td>
+                          <td className="p-3">
+                            {getStatusBadge(cliente.ativo)}
+                          </td>
+                          <td className="p-3">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => openEditModal(cliente)}>
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  className="text-destructive"
+                                  onClick={() => handleDeleteCliente(cliente)}
+                                >
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-        {/* Clients List */}
-        <div className="grid gap-4">
-          {mockClientes.map((cliente) => (
-            <Card key={cliente.id} className="hover:shadow-custom-md transition-shadow">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center">
-                        <Building2 className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg">{cliente.razaoSocial}</h3>
-                        <p className="text-sm text-muted-foreground">CNPJ: {cliente.cnpj}</p>
-                      </div>
-                      {getStatusBadge(cliente.status)}
+                {/* Paginação */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between p-4 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      Mostrando {startIndex + 1} a {Math.min(endIndex, filteredClientes.length)} de {filteredClientes.length} clientes
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{cliente.email}</span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        Anterior
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {page}
+                          </Button>
+                        ))}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{cliente.telefone}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{cliente.endereco}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Prazo: {cliente.prazoPagamento}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-6 mt-4 pt-4 border-t">
-                      <div>
-                        <span className="text-sm text-muted-foreground">Total de Vagas:</span>
-                        <span className="ml-2 font-medium">{cliente.totalVagas}</span>
-                      </div>
-                      <div>
-                        <span className="text-sm text-muted-foreground">Última Vaga:</span>
-                        <span className="ml-2 font-medium">
-                          {new Date(cliente.ultimaVaga).toLocaleDateString('pt-BR')}
-                        </span>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        Próxima
+                      </Button>
                     </div>
                   </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Editar Cliente</DropdownMenuItem>
-                      <DropdownMenuItem>Ver Vagas</DropdownMenuItem>
-                      <DropdownMenuItem>Histórico</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
-                        Desativar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* Add Cliente Modal */}
+        <AddClienteModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSubmit={handleAddCliente}
+        />
 
-        {/* Pagination placeholder */}
-        <div className="flex justify-center">
-          <Button variant="outline">Carregar Mais</Button>
-        </div>
+        {/* Edit Cliente Modal */}
+        <EditClienteModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedCliente(null);
+          }}
+          onSubmit={handleEditCliente}
+          cliente={selectedCliente}
+        />
       </div>
     </MainLayout>
   );

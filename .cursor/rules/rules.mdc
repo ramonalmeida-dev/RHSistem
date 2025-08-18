@@ -1,0 +1,101 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 🪷 Lotus Recruit Hub - Regras de Organização
+
+## 📁 Estrutura de Pastas Obrigatória
+
+### Frontend (src/)
+- `components/` - Componentes reutilizáveis organizados por domínio
+  - `auth/` - Autenticação e proteção de rotas
+  - `dashboard/` - Componentes do dashboard
+  - `layout/` - Layout principal (Header, Sidebar, MainLayout)
+  - `ui/` - Componentes base (shadcn/ui)
+  - `[entidade]/` - Componentes específicos por entidade (clientes, vagas, etc.)
+- `contexts/` - Contextos React (AuthContext, etc.)
+- `hooks/` - Hooks customizados
+- `lib/` - Utilitários e configurações (supabase, utils, etc.)
+- `pages/` - Páginas da aplicação
+  - `relatorios/` - Páginas de relatórios
+- `types/` - Tipos TypeScript globais
+
+### Backend (supabase/)
+- `functions/` - Edge Functions organizadas por funcionalidade
+  - `auth-*/` - Funções de autenticação
+  - `[entidade]/` - CRUD por entidade
+  - `relatorios-*/` - Relatórios
+  - `utils/` - Utilitários compartilhados
+- `migrations/` - Migrações do banco
+- `seed/` - Dados iniciais
+- `config.toml` - Configuração local
+- `types.ts` - Tipos do backend
+
+### Documentação (docs/)
+- `BACKEND_REQUIREMENTS.md` - Requisitos do backend
+- `FRONTEND_INTEGRATION.md` - Integração frontend-backend
+- `API_DOCUMENTATION.md` - Documentação da API
+- `DEVELOPMENT_GUIDE.md` - Guia de desenvolvimento
+
+## 📋 Regras de Nomenclatura
+
+### Arquivos e Pastas
+- Use **kebab-case** para pastas: `auth-login/`, `relatorios-financeiro/`
+- Use **PascalCase** para componentes: `ProtectedRoute.tsx`, `MainLayout.tsx`
+- Use **camelCase** para utilitários: `supabase.ts`, `utils.ts`
+
+### Componentes
+- Sufixo `.tsx` para componentes React
+- Sufixo `.ts` para utilitários e tipos
+- Nome descritivo e específico
+
+## 🔧 Configuração de Arquivos
+
+### Obrigatórios na Raiz
+- `README.md` - Documentação principal
+- `package.json` - Dependências
+- `vite.config.ts` - Configuração Vite
+- `tsconfig.json` - Configuração TypeScript
+- `tailwind.config.ts` - Configuração Tailwind
+- `.gitignore` - Arquivos ignorados
+
+### Proibidos na Raiz
+- Arquivos de documentação temporários
+- Arquivos de texto sem formatação
+- Lock files duplicados (apenas package-lock.json)
+- CSS não utilizado (apenas Tailwind)
+
+## 📝 Padrões de Código
+
+### Frontend
+- Use TypeScript para todos os arquivos
+- Use hooks customizados para lógica reutilizável
+- Use contextos para estado global
+- Use componentes funcionais com hooks
+- Use Tailwind CSS para estilização
+
+### Backend
+- Use Edge Functions para APIs
+- Use TypeScript para tipagem
+- Use Row Level Security (RLS)
+- Use JWT para autenticação
+- Use bcrypt para hash de senhas
+
+## �� Arquivos Proibidos
+- `App.css` - Use Tailwind CSS
+- `bun.lockb` - Use apenas npm
+- Arquivos `.txt` sem formatação
+- Documentação duplicada
+- Arquivos temporários
+
+## ✅ Checklist de Organização
+- [ ] Estrutura de pastas seguindo padrão
+- [ ] Nomenclatura consistente
+- [ ] Documentação na pasta `docs/`
+- [ ] Tipos organizados em `src/types/`
+- [ ] Componentes por domínio
+- [ ] Configuração centralizada
+- [ ] README.md atualizado
+
+- [ ] Arquivos desnecessários removidos

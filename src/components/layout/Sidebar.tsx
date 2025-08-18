@@ -16,15 +16,18 @@ import {
   UserPlus,
   Search,
   Calendar,
-  DollarSign
+  DollarSign,
+  Shield
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItem {
   title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
+  adminOnly?: boolean;
 }
 
 const mainNavItems: NavItem[] = [
@@ -44,11 +47,7 @@ const mainNavItems: NavItem[] = [
     icon: Briefcase,
     badge: "12"
   },
-  {
-    title: "Candidatos",
-    href: "/candidatos",
-    icon: UserPlus,
-  },
+
   {
     title: "Banco de CVs",
     href: "/curriculos",
@@ -71,11 +70,7 @@ const reportNavItems: NavItem[] = [
     title: "Financeiro",
     href: "/relatorios/financeiro",
     icon: DollarSign,
-  },
-  {
-    title: "Análises",
-    href: "/relatorios/analises",
-    icon: BarChart3,
+    adminOnly: true,
   },
 ];
 
@@ -86,6 +81,18 @@ interface SidebarProps {
 export function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
+
+  const isAdmin = user?.tipo === "admin";
+
+  // Filtrar itens baseado no tipo de usuário
+  const filteredMainNavItems = mainNavItems.filter(item => 
+    !item.adminOnly || isAdmin
+  );
+
+  const filteredReportNavItems = reportNavItems.filter(item => 
+    !item.adminOnly || isAdmin
+  );
 
   const NavItemComponent = ({ item }: { item: NavItem }) => {
     const isActive = location.pathname === item.href;
@@ -98,17 +105,20 @@ export function Sidebar({ className }: SidebarProps) {
           className={cn(
             "w-full justify-start gap-3 h-10",
             collapsed && "justify-center px-2",
-            isActive && "bg-primary/10 text-primary border-primary/20"
+            isActive && "bg-secondary text-secondary-foreground"
           )}
         >
-          <Icon className="h-4 w-4 flex-shrink-0" />
+          <Icon className={cn("h-4 w-4", collapsed && "h-5 w-5")} />
           {!collapsed && (
             <>
               <span className="flex-1 text-left">{item.title}</span>
               {item.badge && (
-                <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                <span className="ml-auto bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
                   {item.badge}
                 </span>
+              )}
+              {item.adminOnly && (
+                <Shield className="h-3 w-3 text-muted-foreground" />
               )}
             </>
           )}
@@ -120,85 +130,76 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <div
       className={cn(
-        "relative bg-card border-r border-border transition-all duration-300",
+        "flex h-full flex-col border-r bg-background",
         collapsed ? "w-16" : "w-64",
         className
       )}
     >
-      {/* Logo */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">L</span>
-          </div>
-          {!collapsed && (
-            <div>
-              <h1 className="font-bold text-lg text-primary">LOTUSAREV</h1>
-              <p className="text-xs text-muted-foreground">Recrutamento & Seleção</p>
-            </div>
-          )}
+      {/* Header */}
+      <div className="flex h-16 items-center justify-between px-4 border-b">
+        <div className="flex justify-start">
+          <img 
+            src="/logo.jpeg" 
+            alt="Lotus Recruit Hub" 
+            className="h-16 w-24 rounded-lg object-contain"
+          />
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setCollapsed(!collapsed)}
+          className="h-8 w-8 p-0"
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </Button>
       </div>
-
-      {/* Collapse Button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="absolute -right-3 top-20 z-10 h-6 w-6 rounded-full border bg-background shadow-custom-md"
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        {collapsed ? (
-          <ChevronRight className="h-3 w-3" />
-        ) : (
-          <ChevronLeft className="h-3 w-3" />
-        )}
-      </Button>
 
       {/* Navigation */}
       <ScrollArea className="flex-1 px-3 py-4">
         <div className="space-y-2">
-          <div className="space-y-1">
-            {!collapsed && (
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-3 pb-2">
-                Principal
-              </p>
-            )}
-            {mainNavItems.map((item) => (
-              <NavItemComponent key={item.href} item={item} />
-            ))}
+          <div className="px-2 py-1">
+            <h3 className={cn(
+              "text-xs font-semibold text-muted-foreground",
+              collapsed && "sr-only"
+            )}>
+              Principal
+            </h3>
           </div>
+          {filteredMainNavItems.map((item) => (
+            <NavItemComponent key={item.href} item={item} />
+          ))}
+        </div>
 
-          <Separator className="my-4" />
+        <Separator className="my-4" />
 
-          <div className="space-y-1">
-            {!collapsed && (
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-3 pb-2">
-                Relatórios
-              </p>
-            )}
-            {reportNavItems.map((item) => (
-              <NavItemComponent key={item.href} item={item} />
-            ))}
+        <div className="space-y-2">
+          <div className="px-2 py-1">
+            <h3 className={cn(
+              "text-xs font-semibold text-muted-foreground",
+              collapsed && "sr-only"
+            )}>
+              Relatórios
+            </h3>
           </div>
-
-          <Separator className="my-4" />
-
-          <div className="space-y-1">
-            <Link to="/configuracoes">
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start gap-3 h-10",
-                  collapsed && "justify-center px-2"
-                )}
-              >
-                <Settings className="h-4 w-4 flex-shrink-0" />
-                {!collapsed && <span>Configurações</span>}
-              </Button>
-            </Link>
-          </div>
+          {filteredReportNavItems.map((item) => (
+            <NavItemComponent key={item.href} item={item} />
+          ))}
         </div>
       </ScrollArea>
+
+      {/* Footer */}
+      {!collapsed && (
+        <div className="border-t p-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Shield className="h-3 w-3" />
+            <span>{isAdmin ? "Administrador" : "Consultor"}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

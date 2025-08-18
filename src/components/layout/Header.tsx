@@ -10,9 +10,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Search, User, LogOut, Settings } from "lucide-react";
+import { Bell, Search, User, LogOut, Settings, Shield } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Header() {
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/login";
+  };
+
+  const getUserInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map(n => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getUserRole = (tipo: string) => {
+    return tipo === "admin" ? "Administrador" : "Consultor";
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
       <div className="flex h-16 items-center px-6">
@@ -42,9 +63,12 @@ export function Header() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src="/placeholder-avatar.jpg" alt="Usuário" />
+                  <AvatarImage 
+                    src={user ? "/placeholder-avatar.jpg" : "/logo.jpeg"} 
+                    alt={user?.nome || "Lotus Recruit Hub"} 
+                  />
                   <AvatarFallback className="bg-primary text-primary-foreground">
-                    JD
+                    {user ? getUserInitials(user.nome) : "LR"}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -52,12 +76,13 @@ export function Header() {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">João Silva</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    Consultor Sênior
+                  <p className="text-sm font-medium leading-none">{user?.nome || "Lotus Recruit Hub"}</p>
+                  <p className="text-xs leading-none text-muted-foreground flex items-center gap-1">
+                    {user?.tipo === "admin" && <Shield className="h-3 w-3" />}
+                    {user ? getUserRole(user.tipo) : "Sistema"}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    joao@lotusarev.com
+                    {user?.email || "sistema@lotusrecruit.com"}
                   </p>
                 </div>
               </DropdownMenuLabel>
@@ -71,7 +96,10 @@ export function Header() {
                 <span>Configurações</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem 
+                className="text-destructive"
+                onClick={handleLogout}
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Sair</span>
               </DropdownMenuItem>
