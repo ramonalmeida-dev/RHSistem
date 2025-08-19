@@ -130,6 +130,7 @@ export interface Vaga {
   // Relacionamentos
   empresa?: Cliente;
   consultor?: User;
+  questionario?: QuestionarioVaga;
 }
 
 export interface Candidato {
@@ -460,3 +461,29 @@ export interface BancoCurriculoStats {
   favoritos: number;
   adicionados_mes: number;
 } 
+
+// Tipos para questionário dinâmico de vagas
+export type TipoPergunta = 'texto' | 'multipla_escolha' | 'escolha_unica' | 'numero' | 'data' | 'texto_longo';
+
+export interface PerguntaQuestionario {
+  id: string;
+  pergunta: string;
+  tipo: TipoPergunta;
+  obrigatoria: boolean;
+  opcoes?: string[]; // Para perguntas de múltipla escolha ou escolha única
+  ordem: number;
+}
+
+export interface QuestionarioVaga {
+  id: string;
+  vaga_id: string;
+  titulo: string;
+  descricao?: string;
+  ativo: boolean;
+  perguntas: PerguntaQuestionario[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type CreateQuestionarioVaga = Omit<QuestionarioVaga, 'id' | 'created_at' | 'updated_at'>;
+export type UpdateQuestionarioVaga = Partial<Omit<QuestionarioVaga, 'id' | 'created_at' | 'updated_at'>>; 

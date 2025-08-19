@@ -45,7 +45,6 @@ const mainNavItems: NavItem[] = [
     title: "Vagas",
     href: "/vagas", 
     icon: Briefcase,
-    badge: "12"
   },
 
   {

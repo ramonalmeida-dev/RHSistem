@@ -25,6 +25,13 @@ import {
   MessageSquare
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { QuestionarioDinamico } from "./QuestionarioDinamico";
+import { PreviewQuestionario } from "./PreviewQuestionario";
+import { PerguntaQuestionario } from "@/types";
+import { QuestionarioService } from "@/lib/questionarioService";
+import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Eye } from "lucide-react";
 
 interface AddVagaModalProps {
   isOpen: boolean;
@@ -34,7 +41,7 @@ interface AddVagaModalProps {
 
 interface VagaData {
   numeroVaga: string;
-  empresaId: number;
+  empresaId: string;
   contatoEnvioCv: string;
   email: string;
   celular: string;
@@ -49,25 +56,25 @@ interface VagaData {
   dataEncerramento: string;
   perfilWord: string;
   informacoesComplementares: string;
-  questionarioTecnico: string;
   observacoes: string;
-  consultorId: number;
+  consultorId: string;
+  perguntasQuestionario: PerguntaQuestionario[];
 }
 
 interface Cliente {
-  id: number;
+  id: string;
   razao_social: string;
 }
 
 interface Usuario {
-  id: number;
+  id: string;
   nome: string;
 }
 
 export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
   const [formData, setFormData] = useState<VagaData>({
     numeroVaga: "",
-    empresaId: 0,
+    empresaId: "",
     contatoEnvioCv: "",
     email: "",
     celular: "",
@@ -82,9 +89,9 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
     dataEncerramento: "",
     perfilWord: "",
     informacoesComplementares: "",
-    questionarioTecnico: "",
     observacoes: "",
-    consultorId: 0,
+    consultorId: "",
+    perguntasQuestionario: [],
   });
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -121,7 +128,7 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
     }
   }, [isOpen]);
 
-  const handleInputChange = (field: keyof VagaData, value: string | number) => {
+  const handleInputChange = (field: keyof VagaData, value: string | number | PerguntaQuestionario[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -136,8 +143,8 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
       newErrors.numeroVaga = "Número da vaga é obrigatório";
     }
 
-    if (!formData.empresaId || formData.empresaId === 0) {
-      newErrors.empresaId = "Empresa é obrigatória";
+    if (!formData.empresaId || formData.empresaId === "") {
+      newErrors.empresaId = "Empresa é obrigatória" as any;
     }
 
     if (!formData.contatoEnvioCv.trim()) {
@@ -190,25 +197,45 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
       newErrors.dataEncerramento = "Data de encerramento é obrigatória";
     }
 
-    if (!formData.consultorId || formData.consultorId === 0) {
-      newErrors.consultorId = "Consultor é obrigatório";
+    if (!formData.consultorId || formData.consultorId === "") {
+      newErrors.consultorId = "Consultor é obrigatório" as any;
+    }
+
+    // Validar questionário se houver perguntas
+    if (formData.perguntasQuestionario.length > 0) {
+      const { valid, errors } = QuestionarioService.validarPerguntas(formData.perguntasQuestionario);
+      if (!valid) {
+        toast.error("Questionário inválido", {
+          description: errors.join('\n')
+        });
+        return false;
+      }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
-      onSubmit(formData);
-      handleClose();
+      try {
+        // Primeiro criar a vaga
+        onSubmit(formData);
+        
+        // Depois salvar o questionário se houver perguntas
+        // Nota: Isso será feito no componente pai após a vaga ser criada
+        handleClose();
+      } catch (error) {
+        console.error('Erro ao salvar vaga:', error);
+        toast.error('Erro ao salvar vaga: ' + (error as Error).message);
+      }
     }
   };
 
   const handleClose = () => {
     setFormData({
       numeroVaga: "",
-      empresaId: 0,
+      empresaId: "",
       contatoEnvioCv: "",
       email: "",
       celular: "",
@@ -223,9 +250,9 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
       dataEncerramento: "",
       perfilWord: "",
       informacoesComplementares: "",
-      questionarioTecnico: "",
       observacoes: "",
-      consultorId: 0,
+      consultorId: "",
+      perguntasQuestionario: [],
     });
     setErrors({});
     onClose();
@@ -278,15 +305,15 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                   Empresa *
                 </Label>
                 <Select
-                  value={formData.empresaId ? formData.empresaId.toString() : ""}
-                  onValueChange={(value) => handleInputChange("empresaId", parseInt(value))}
+                  value={formData.empresaId}
+                  onValueChange={(value) => handleInputChange("empresaId", value)}
                 >
                   <SelectTrigger className={errors.empresaId ? "border-destructive" : ""}>
                     <SelectValue placeholder="Selecione a empresa" />
                   </SelectTrigger>
                   <SelectContent>
                     {clientes.map((cliente) => (
-                      <SelectItem key={cliente.id} value={cliente.id.toString()}>
+                      <SelectItem key={cliente.id} value={cliente.id}>
                         {cliente.razao_social}
                       </SelectItem>
                     ))}
@@ -552,19 +579,7 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="questionarioTecnico" className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Questionário Técnico
-                </Label>
-                <Textarea
-                  id="questionarioTecnico"
-                  placeholder="Questionário técnico para os candidatos"
-                  value={formData.questionarioTecnico}
-                  onChange={(e) => handleInputChange("questionarioTecnico", e.target.value)}
-                  rows={3}
-                />
-              </div>
+
 
               <div className="space-y-2">
                 <Label htmlFor="observacoes" className="flex items-center gap-2">
@@ -593,15 +608,15 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                   Consultor Responsável *
                 </Label>
                 <Select
-                  value={formData.consultorId ? formData.consultorId.toString() : ""}
-                  onValueChange={(value) => handleInputChange("consultorId", parseInt(value))}
+                  value={formData.consultorId}
+                  onValueChange={(value) => handleInputChange("consultorId", value)}
                 >
                   <SelectTrigger className={errors.consultorId ? "border-destructive" : ""}>
                     <SelectValue placeholder="Selecione o consultor" />
                   </SelectTrigger>
                   <SelectContent>
                     {usuarios.map((usuario) => (
-                      <SelectItem key={usuario.id} value={usuario.id.toString()}>
+                      <SelectItem key={usuario.id} value={usuario.id}>
                         {usuario.nome}
                       </SelectItem>
                     ))}
@@ -613,6 +628,56 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
               </div>
             </div>
           </div>
+
+          {/* Questionário Dinâmico */}
+          <div className="space-y-4">
+            <Tabs defaultValue="editor" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="editor" className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Editor de Perguntas
+                </TabsTrigger>
+                <TabsTrigger value="preview" className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  Prévia ({formData.perguntasQuestionario.length})
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="editor" className="mt-4">
+                <QuestionarioDinamico
+                  perguntas={formData.perguntasQuestionario}
+                  onChange={(perguntas) => handleInputChange("perguntasQuestionario", perguntas)}
+                />
+              </TabsContent>
+              
+              <TabsContent value="preview" className="mt-4">
+                <PreviewQuestionario 
+                  perguntas={formData.perguntasQuestionario}
+                  titulo="Questionário da Vaga"
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Resumo do Questionário */}
+          {formData.perguntasQuestionario.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold border-b pb-2">Resumo do Questionário</h3>
+              <div className="bg-muted/50 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">
+                    {formData.perguntasQuestionario.length} pergunta(s) adicionada(s)
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {formData.perguntasQuestionario.filter(p => p.obrigatoria).length} obrigatória(s)
+                  </span>
+                </div>
+                <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
+                  {QuestionarioService.gerarPreviewPerguntas(formData.perguntasQuestionario)}
+                </pre>
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>

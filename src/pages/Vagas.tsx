@@ -104,11 +104,11 @@ const getStatusBadge = (vaga: Vaga) => {
   
   return (
     <div className="flex flex-col gap-1">
-      <Badge className={statusConfig.color}>
+      <Badge className={`${statusConfig.color} w-fit text-xs px-2 py-0.5`}>
         {statusConfig.title}
       </Badge>
       {substatusConfig && (
-        <Badge variant="outline" className={substatusConfig.color}>
+        <Badge variant="outline" className={`${substatusConfig.color} w-fit text-xs px-2 py-0.5`}>
           {substatusConfig.title}
         </Badge>
       )}
@@ -343,10 +343,9 @@ const Vagas = () => {
           data_encerramento: vagaData.dataEncerramento,
           perfil_word: vagaData.perfilWord,
           informacoes_complementares: vagaData.informacoesComplementares,
-          questionario_tecnico: vagaData.questionarioTecnico,
           observacoes: vagaData.observacoes,
           consultor_id: vagaData.consultorId,
-          status: 'ativa'
+          status: 'publicada'
         })
         .select(`
           *,
@@ -356,6 +355,21 @@ const Vagas = () => {
         .single();
 
       if (error) throw error;
+
+      // Salvar questionário se houver perguntas
+      if (vagaData.perguntasQuestionario && vagaData.perguntasQuestionario.length > 0) {
+        const { QuestionarioService } = await import('@/lib/questionarioService');
+        try {
+          await QuestionarioService.salvarQuestionarioVaga(
+            data.id,
+            vagaData.perguntasQuestionario,
+            'Questionário da Vaga'
+          );
+        } catch (questionarioError) {
+          console.error('Erro ao salvar questionário:', questionarioError);
+          // Continua mesmo se houver erro no questionário
+        }
+      }
 
       setVagas(prev => [data, ...prev]);
       setIsAddModalOpen(false);
@@ -368,7 +382,7 @@ const Vagas = () => {
       console.error('Erro ao criar vaga:', error);
       toast({
         title: "Erro",
-        description: "Erro ao criar vaga",
+        description: "Erro ao criar vaga: " + (error as any)?.message,
         variant: "destructive",
       });
     }

@@ -25,6 +25,13 @@ import {
   MessageSquare
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { QuestionarioDinamico } from "./QuestionarioDinamico";
+import { PreviewQuestionario } from "./PreviewQuestionario";
+import { PerguntaQuestionario } from "@/types";
+import { QuestionarioService } from "@/lib/questionarioService";
+import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Eye } from "lucide-react";
 
 interface EditVagaModalProps {
   isOpen: boolean;
@@ -35,7 +42,7 @@ interface EditVagaModalProps {
 
 interface VagaData {
   numeroVaga: string;
-  empresaId: number;
+  empresaId: string;
   contatoEnvioCv: string;
   email: string;
   celular: string;
@@ -50,15 +57,15 @@ interface VagaData {
   dataEncerramento: string;
   perfilWord: string;
   informacoesComplementares: string;
-  questionarioTecnico: string;
   observacoes: string;
-  consultorId: number;
+  consultorId: string;
+  perguntasQuestionario: PerguntaQuestionario[];
 }
 
 interface Vaga {
   id: string;
   numero_vaga: string;
-  empresa_id: number;
+  empresa_id: string;
   empresa?: {
     razao_social: string;
     cnpj: string;
@@ -79,7 +86,7 @@ interface Vaga {
   informacoes_complementares?: string;
   questionario_tecnico?: string;
   observacoes?: string;
-  consultor_id: number;
+  consultor_id: string;
   consultor?: {
     nome: string;
     email: string;
@@ -91,19 +98,19 @@ interface Vaga {
 }
 
 interface Cliente {
-  id: number;
+  id: string;
   razao_social: string;
 }
 
 interface Usuario {
-  id: number;
+  id: string;
   nome: string;
 }
 
 export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModalProps) {
   const [formData, setFormData] = useState<VagaData>({
     numeroVaga: "",
-    empresaId: 0,
+    empresaId: "",
     contatoEnvioCv: "",
     email: "",
     celular: "",
@@ -118,9 +125,9 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
     dataEncerramento: "",
     perfilWord: "",
     informacoesComplementares: "",
-    questionarioTecnico: "",
     observacoes: "",
-    consultorId: 0,
+    consultorId: "",
+    perguntasQuestionario: [],
   });
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -159,32 +166,47 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
 
   // Preencher formulário quando vaga for selecionada
   useEffect(() => {
-    if (vaga) {
-      setFormData({
-        numeroVaga: vaga.numero_vaga,
-        empresaId: vaga.empresa_id,
-        contatoEnvioCv: vaga.contato_envio_cv,
-        email: vaga.email,
-        celular: vaga.celular,
-        cargo: vaga.cargo,
-        salario: vaga.salario,
-        localTrabalho: vaga.local_trabalho,
-        dataRecebimento: vaga.data_recebimento,
-        dataFormatacaoPerfil: vaga.data_formatacao_perfil,
-        dataDivulgacao: vaga.data_divulgacao,
-        dataInicioSelecao: vaga.data_inicio_selecao,
-        dataEnvioCurriculos: vaga.data_envio_curriculos,
-        dataEncerramento: vaga.data_encerramento,
-        perfilWord: vaga.perfil_word || "",
-        informacoesComplementares: vaga.informacoes_complementares || "",
-        questionarioTecnico: vaga.questionario_tecnico || "",
-        observacoes: vaga.observacoes || "",
-        consultorId: vaga.consultor_id,
-      });
-    }
+    const loadFormData = async () => {
+      if (vaga) {
+        // Carregar questionário existente se houver
+        let perguntasQuestionario: PerguntaQuestionario[] = [];
+        try {
+          const questionarioExistente = await QuestionarioService.buscarQuestionarioPorVaga(vaga.id);
+          if (questionarioExistente) {
+            perguntasQuestionario = questionarioExistente.perguntas;
+          }
+        } catch (error) {
+          console.error('Erro ao carregar questionário:', error);
+        }
+
+        setFormData({
+          numeroVaga: vaga.numero_vaga,
+          empresaId: vaga.empresa_id,
+          contatoEnvioCv: vaga.contato_envio_cv,
+          email: vaga.email,
+          celular: vaga.celular,
+          cargo: vaga.cargo,
+          salario: vaga.salario,
+          localTrabalho: vaga.local_trabalho,
+          dataRecebimento: vaga.data_recebimento,
+          dataFormatacaoPerfil: vaga.data_formatacao_perfil,
+          dataDivulgacao: vaga.data_divulgacao,
+          dataInicioSelecao: vaga.data_inicio_selecao,
+          dataEnvioCurriculos: vaga.data_envio_curriculos,
+          dataEncerramento: vaga.data_encerramento,
+          perfilWord: vaga.perfil_word || "",
+          informacoesComplementares: vaga.informacoes_complementares || "",
+          observacoes: vaga.observacoes || "",
+          consultorId: vaga.consultor_id,
+          perguntasQuestionario,
+        });
+      }
+    };
+
+    loadFormData();
   }, [vaga]);
 
-  const handleInputChange = (field: keyof VagaData, value: string | number) => {
+  const handleInputChange = (field: keyof VagaData, value: string | number | PerguntaQuestionario[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -199,8 +221,8 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
       newErrors.numeroVaga = "Número da vaga é obrigatório";
     }
 
-    if (!formData.empresaId || formData.empresaId === 0) {
-      newErrors.empresaId = "Empresa é obrigatória";
+    if (!formData.empresaId || formData.empresaId === "") {
+      newErrors.empresaId = "Empresa é obrigatória" as any;
     }
 
     if (!formData.contatoEnvioCv.trim()) {
@@ -253,18 +275,44 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
       newErrors.dataEncerramento = "Data de encerramento é obrigatória";
     }
 
-    if (!formData.consultorId || formData.consultorId === 0) {
-      newErrors.consultorId = "Consultor é obrigatório";
+    if (!formData.consultorId || formData.consultorId === "") {
+      newErrors.consultorId = "Consultor é obrigatório" as any;
+    }
+
+    // Validar questionário se houver perguntas
+    if (formData.perguntasQuestionario.length > 0) {
+      const { valid, errors } = QuestionarioService.validarPerguntas(formData.perguntasQuestionario);
+      if (!valid) {
+        toast.error("Questionário inválido", {
+          description: errors.join('\n')
+        });
+        return false;
+      }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
-      onSubmit(formData);
-      handleClose();
+      try {
+        // Salvar questionário se houver perguntas
+        if (formData.perguntasQuestionario.length > 0 && vaga) {
+          await QuestionarioService.salvarQuestionarioVaga(
+            vaga.id,
+            formData.perguntasQuestionario,
+            'Questionário da Vaga'
+          );
+          toast.success('Questionário salvo com sucesso!');
+        }
+        
+        onSubmit(formData);
+        handleClose();
+      } catch (error) {
+        console.error('Erro ao salvar questionário:', error);
+        toast.error('Erro ao salvar questionário: ' + (error as Error).message);
+      }
     }
   };
 
@@ -596,19 +644,7 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="questionarioTecnico" className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Questionário Técnico
-                </Label>
-                <Textarea
-                  id="questionarioTecnico"
-                  placeholder="Questionário técnico para os candidatos"
-                  value={formData.questionarioTecnico}
-                  onChange={(e) => handleInputChange("questionarioTecnico", e.target.value)}
-                  rows={3}
-                />
-              </div>
+
 
               <div className="space-y-2">
                 <Label htmlFor="observacoes" className="flex items-center gap-2">
@@ -657,6 +693,56 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
               </div>
             </div>
           </div>
+
+          {/* Questionário Dinâmico */}
+          <div className="space-y-4">
+            <Tabs defaultValue="editor" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="editor" className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Editor de Perguntas
+                </TabsTrigger>
+                <TabsTrigger value="preview" className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  Prévia ({formData.perguntasQuestionario.length})
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="editor" className="mt-4">
+                <QuestionarioDinamico
+                  perguntas={formData.perguntasQuestionario}
+                  onChange={(perguntas) => handleInputChange("perguntasQuestionario", perguntas)}
+                />
+              </TabsContent>
+              
+              <TabsContent value="preview" className="mt-4">
+                <PreviewQuestionario 
+                  perguntas={formData.perguntasQuestionario}
+                  titulo="Questionário da Vaga"
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Resumo do Questionário */}
+          {formData.perguntasQuestionario.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold border-b pb-2">Resumo do Questionário</h3>
+              <div className="bg-muted/50 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">
+                    {formData.perguntasQuestionario.length} pergunta(s) adicionada(s)
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {formData.perguntasQuestionario.filter(p => p.obrigatoria).length} obrigatória(s)
+                  </span>
+                </div>
+                <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
+                  {QuestionarioService.gerarPreviewPerguntas(formData.perguntasQuestionario)}
+                </pre>
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
