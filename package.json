@@ -7,25 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:dev": "vite build --mode development",
-    "build:prod": "NODE_ENV=production vite build",
-    "build:check": "tsc --noEmit && vite build",
-    "prebuild": "node scripts/pre-build.js",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "lint:fix": "eslint . --ext ts,tsx --fix",
     "preview": "vite preview",
-    "type-check": "tsc --noEmit",
-    "test": "vitest --config vitest.config.ts",
-    "test:ui": "vitest --ui --config vitest.config.ts",
-    "test:run": "vitest run --config vitest.config.ts",
-    "test:coverage": "vitest run --coverage --config vitest.config.ts",
-    "test:e2e": "vitest run src/test/e2e/ --config vitest.config.ts",
-    "test:integration": "vitest run src/test/integration/ --config vitest.config.ts",
-    "test:complete": "./src/test/run-all-tests.sh",
-    "test:flow": "vitest run src/test/e2e/simple-flow.test.tsx --config vitest.config.ts",
-    "clean": "rm -rf dist node_modules/.vite",
-    "build:analyze": "npx vite-bundle-analyzer dist/stats.html",
-    "vercel:deploy": "npm run prebuild && npm run build && vercel deploy --prod"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -81,8 +64,7 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
-    "zod": "^3.25.76",
-    "typescript": "^5.8.3"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
@@ -104,6 +86,7 @@
     "lovable-tagger": "^1.1.9",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19",
     "vitest": "^3.2.4"
