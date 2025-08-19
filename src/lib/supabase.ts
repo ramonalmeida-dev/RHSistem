@@ -6,27 +6,10 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Configurações de sessão melhoradas
+    // Configurações de sessão simples
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
-  },
-  global: {
-    // Headers globais com timeout
-    headers: {
-      'X-Client-Info': 'lotus-recruit-hub@1.0.0',
-    },
-    // Timeout de 10 segundos para requests
-    fetch: (url, options = {}) => {
-      return fetch(url, {
-        ...options,
-        signal: AbortSignal.timeout(10000), // 10 segundos timeout
-      });
-    },
-  },
-  db: {
-    // Schema padrão
-    schema: 'public',
+    detectSessionInUrl: false, // Desabilitar para evitar overhead
   },
 });
 
@@ -37,7 +20,13 @@ if (import.meta.env.DEV) {
       hasSession: !!session,
       expiresAt: session?.expires_at,
       user: session?.user?.email,
+      timestamp: new Date().toISOString(),
     });
+    
+    // Alertar sobre refresh desnecessários
+    if (event === 'TOKEN_REFRESHED' && !session) {
+      console.warn('Token refresh triggered without session - this might be unnecessary');
+    }
   });
 }
 

@@ -194,6 +194,7 @@ const Vagas = () => {
   const loadVagas = async () => {
     try {
       setLoading(true);
+      
       const { data, error } = await supabase
         .from('vagas')
         .select(`
@@ -203,13 +204,17 @@ const Vagas = () => {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na consulta de vagas:', error);
+        throw error;
+      }
+      
       setVagas(data || []);
     } catch (error) {
       console.error('Erro ao carregar vagas:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar vagas",
+        description: "Erro ao carregar vagas. Verifique sua conexão.",
         variant: "destructive",
       });
     } finally {

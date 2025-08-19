@@ -57,27 +57,43 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
   useEffect(() => {
     let mounted = true;
 
-    // Verificar sessão inicial com timeout
+    // Verificar sessão inicial com timeout reduzido
     const initializeAuth = async () => {
       try {
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout na inicialização do candidato')), 8000)
+          setTimeout(() => reject(new Error('Timeout na inicialização do candidato')), 5000)
         );
 
         const sessionPromise = supabase.auth.getSession();
         
         const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
         
+        // Só tentar carregar dados se houver sessão E for candidato externo
         if (mounted && session?.user) {
-          setUser(session.user);
-          await loadCandidatoByAuthId(session.user.id);
+          const isExternalCandidate = session.user.user_metadata?.tipo === 'candidato_externo';
+          
+          if (isExternalCandidate) {
+            setUser(session.user);
+            await loadCandidatoByAuthId(session.user.id);
+          } else {
+            // É admin ou consultor - não buscar dados de candidato
+            setUser(null);
+            setCandidato(null);
+          }
+        } else if (mounted) {
+          // Não há sessão - isso é normal para candidatos não logados
+          setUser(null);
+          setCandidato(null);
         }
       } catch (error) {
         console.error('Erro ao inicializar sessão do candidato:', error);
-        // Em caso de timeout ou erro, limpar estado
+        // Em caso de timeout ou erro, apenas limpar estado
         if (mounted) {
           setUser(null);
           setCandidato(null);
+        }
+      } finally {
+        if (mounted) {
           setLoading(false);
         }
       }
@@ -94,22 +110,42 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
 
         try {
           if (event === 'SIGNED_IN' && session?.user) {
-            setUser(session.user);
+            const isExternalCandidate = session.user.user_metadata?.tipo === 'candidato_externo';
             
-            // Aguardar um pouco antes de tentar carregar o candidato
-            setTimeout(async () => {
-              if (mounted) {
-                await loadCandidatoByAuthId(session.user.id);
-              }
-            }, 1000);
+            if (isExternalCandidate) {
+              setUser(session.user);
+              
+              // Aguardar um pouco antes de tentar carregar o candidato
+              setTimeout(async () => {
+                if (mounted) {
+                  await loadCandidatoByAuthId(session.user.id);
+                }
+              }, 1000);
+            } else {
+              // É admin ou consultor - limpar dados de candidato
+              setUser(null);
+              setCandidato(null);
+            }
             
-          } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
+          } else if (event === 'SIGNED_OUT') {
             setUser(null);
             setCandidato(null);
-          } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-            // Revalidar candidato após refresh do token
-            setUser(session.user);
-            await loadCandidatoByAuthId(session.user.id);
+          } else if (event === 'TOKEN_REFRESHED') {
+            // Para refresh de token, só revalidar se havia uma sessão válida E for candidato externo
+            if (session?.user) {
+              const isExternalCandidate = session.user.user_metadata?.tipo === 'candidato_externo';
+              
+              if (isExternalCandidate) {
+                setUser(session.user);
+                await loadCandidatoByAuthId(session.user.id);
+              } else {
+                setUser(null);
+                setCandidato(null);
+              }
+            } else {
+              setUser(null);
+              setCandidato(null);
+            }
           }
         } catch (error) {
           console.error('Erro no auth state change do candidato:', error);
@@ -131,9 +167,9 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
     try {
       setLoading(true);
       
-      // Timeout para busca do candidato
+      // Timeout para busca do candidato - reduzido para 3 segundos
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout ao buscar candidato')), 5000)
+        setTimeout(() => reject(new Error('Timeout ao buscar candidato')), 3000)
       );
 
       const candidatoPromise = supabase
@@ -158,12 +194,7 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
       }
     } catch (error) {
       console.error('Erro ao carregar candidato por auth ID:', error);
-      // Em caso de erro, tentar refresh da sessão
-      try {
-        await supabase.auth.refreshSession();
-      } catch (refreshError) {
-        console.error('Erro ao fazer refresh da sessão do candidato:', refreshError);
-      }
+      // Não tentar refresh automático para evitar loops
     } finally {
       setLoading(false);
     }
