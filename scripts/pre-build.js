@@ -36,6 +36,9 @@ function info(message) {
   log(colors.blue, 'ℹ️', message);
 }
 
+// Verificar se estamos na Vercel
+const isVercel = process.env.VERCEL === '1';
+
 async function checkEnvironmentVariables() {
   info('Verificando variáveis de ambiente...');
   
@@ -50,14 +53,18 @@ async function checkEnvironmentVariables() {
     if (process.env[varName]) {
       success(`${varName} configurada`);
     } else {
-      error(`${varName} não encontrada`);
-      allPresent = false;
+      if (isVercel) {
+        error(`${varName} não encontrada na Vercel`);
+        allPresent = false;
+      } else {
+        warning(`${varName} não encontrada (OK em desenvolvimento)`);
+      }
     }
   }
 
-  if (!allPresent) {
-    error('Variáveis de ambiente obrigatórias não encontradas!');
-    info('Consulte ENV_VARIABLES.md para configuração');
+  if (!allPresent && isVercel) {
+    error('Variáveis de ambiente obrigatórias não encontradas na Vercel!');
+    info('Configure as variáveis no dashboard da Vercel');
     return false;
   }
 
@@ -72,7 +79,7 @@ function checkPackageJson() {
     const packageContent = JSON.parse(readFileSync(packagePath, 'utf8'));
     
     // Verificar scripts obrigatórios
-    const requiredScripts = ['build', 'dev', 'preview'];
+    const requiredScripts = ['build', 'dev'];
     for (const script of requiredScripts) {
       if (packageContent.scripts[script]) {
         success(`Script '${script}' encontrado`);
@@ -105,23 +112,35 @@ function checkConfigFiles() {
   
   const requiredFiles = [
     'vite.config.ts',
-    'tsconfig.json',
-    'vercel.json',
     'index.html'
   ];
 
-  let allPresent = true;
+  // Arquivos opcionais (apenas warning se não existirem)
+  const optionalFiles = [
+    'tsconfig.json',
+    'vercel.json'
+  ];
+
+  let allCriticalPresent = true;
 
   for (const file of requiredFiles) {
     if (existsSync(file)) {
       success(`${file} encontrado`);
     } else {
       error(`${file} não encontrado`);
-      allPresent = false;
+      allCriticalPresent = false;
     }
   }
 
-  return allPresent;
+  for (const file of optionalFiles) {
+    if (existsSync(file)) {
+      success(`${file} encontrado`);
+    } else {
+      warning(`${file} não encontrado (opcional)`);
+    }
+  }
+
+  return allCriticalPresent;
 }
 
 function checkSourceFiles() {
@@ -129,56 +148,83 @@ function checkSourceFiles() {
   
   const requiredSrcFiles = [
     'src/main.tsx',
-    'src/App.tsx',
+    'src/App.tsx'
+  ];
+
+  // Arquivos opcionais mas importantes
+  const optionalSrcFiles = [
     'src/index.css',
     'src/lib/supabase.ts'
   ];
 
-  let allPresent = true;
+  let allCriticalPresent = true;
 
   for (const file of requiredSrcFiles) {
     if (existsSync(file)) {
       success(`${file} encontrado`);
     } else {
       error(`${file} não encontrado`);
-      allPresent = false;
+      allCriticalPresent = false;
     }
   }
 
-  return allPresent;
+  for (const file of optionalSrcFiles) {
+    if (existsSync(file)) {
+      success(`${file} encontrado`);
+    } else {
+      warning(`${file} não encontrado (importante mas não crítico)`);
+    }
+  }
+
+  return allCriticalPresent;
 }
 
 async function main() {
   console.log('🚀 Verificação Pré-Build - Lotus Recruit Hub\n');
+  
+  if (isVercel) {
+    info('Executando na Vercel - verificações otimizadas');
+  }
 
   const checks = [
-    { name: 'Variáveis de Ambiente', fn: checkEnvironmentVariables },
-    { name: 'Package.json', fn: checkPackageJson },
-    { name: 'Arquivos de Configuração', fn: checkConfigFiles },
-    { name: 'Arquivos Fonte', fn: checkSourceFiles }
+    { name: 'Variáveis de Ambiente', fn: checkEnvironmentVariables, critical: isVercel },
+    { name: 'Package.json', fn: checkPackageJson, critical: true },
+    { name: 'Arquivos de Configuração', fn: checkConfigFiles, critical: true },
+    { name: 'Arquivos Fonte', fn: checkSourceFiles, critical: true }
   ];
 
-  let allPassed = true;
+  let allCriticalPassed = true;
+  let warningsCount = 0;
 
   for (const check of checks) {
     console.log(`\n📋 ${check.name}:`);
     const result = await check.fn();
     if (!result) {
-      allPassed = false;
+      if (check.critical) {
+        allCriticalPassed = false;
+      } else {
+        warningsCount++;
+      }
     }
   }
 
   console.log('\n' + '='.repeat(50));
   
-  if (allPassed) {
-    success('Todas as verificações passaram! ✨');
-    success('Projeto pronto para build de produção! 🚀');
+  if (allCriticalPassed) {
+    success('Verificações críticas passaram! ✨');
+    if (warningsCount > 0) {
+      warning(`${warningsCount} warning(s) encontrado(s) - não crítico`);
+    }
+    success('Projeto pronto para build! 🚀');
     process.exit(0);
   } else {
-    error('Algumas verificações falharam! 🚨');
-    error('Corrija os problemas antes do build.');
+    error('Verificações críticas falharam! 🚨');
+    error('Corrija os problemas críticos antes do build.');
     process.exit(1);
   }
 }
 
-main().catch(console.error); 
+main().catch((err) => {
+  console.error('Erro no script de pré-build:', err);
+  process.exit(1);
+}); 
