@@ -148,7 +148,10 @@ export function generateEmail(status: string, data: EmailData): { subject: strin
 export async function sendEmail(to: string, subject: string, body: string): Promise<boolean> {
   try {
     // Aqui seria integrado com serviço de email real (SendGrid, AWS SES, etc.)
-    console.log('Email enviado:', { to, subject, body });
+    // Em desenvolvimento, apenas simula o envio
+    if (import.meta.env.DEV) {
+      console.log('Email enviado (simulação):', { to, subject: subject.substring(0, 50) + '...' });
+    }
     
     // Simulação de envio
     await new Promise(resolve => setTimeout(resolve, 1000));
