@@ -4,16 +4,16 @@ import { supabase } from '../lib/supabase';
 import { 
   CandidatoExterno, 
   CreateCandidatoExterno, 
-  UpdateCandidatoExterno,
-  CandidaturaExternaWithVaga 
+  UpdateCandidatoExterno
 } from '../../supabase/types';
+import type { User } from '@supabase/supabase-js';
 
 interface CandidatoExternoContextType {
   // Estado do candidato
   candidato: CandidatoExterno | null;
-  candidaturas: CandidaturaExternaWithVaga[];
   loading: boolean;
   error: string | null;
+  user: User | null;
 
   // Métodos de autenticação
   login: (email: string, senha: string) => Promise<boolean>;
@@ -27,7 +27,6 @@ interface CandidatoExternoContextType {
   // Métodos de candidatura
   aplicarVaga: (vagaId: string, observacoes?: string, curriculoUrl?: string) => Promise<boolean>;
   verificarCandidatura: (vagaId: string) => Promise<boolean>;
-  loadCandidaturas: () => Promise<void>;
 
   // Utilitários
   isAuthenticated: boolean;
@@ -50,24 +49,125 @@ interface CandidatoExternoProviderProps {
 
 export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> = ({ children }) => {
   const [candidato, setCandidato] = useState<CandidatoExterno | null>(null);
-  const [candidaturas, setCandidaturas] = useState<CandidaturaExternaWithVaga[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
-  // Verificar se há candidato logado no localStorage
+  // Verificar sessão do Supabase Auth
   useEffect(() => {
-    const candidatoSalvo = localStorage.getItem('candidato_externo');
-    if (candidatoSalvo) {
+    let mounted = true;
+
+    // Verificar sessão inicial com timeout
+    const initializeAuth = async () => {
       try {
-        const candidatoData = JSON.parse(candidatoSalvo);
-        setCandidato(candidatoData);
-        loadCandidaturas();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout na inicialização do candidato')), 8000)
+        );
+
+        const sessionPromise = supabase.auth.getSession();
+        
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        
+        if (mounted && session?.user) {
+          setUser(session.user);
+          await loadCandidatoByAuthId(session.user.id);
+        }
       } catch (error) {
-        console.error('Erro ao carregar candidato do localStorage:', error);
-        localStorage.removeItem('candidato_externo');
+        console.error('Erro ao inicializar sessão do candidato:', error);
+        // Em caso de timeout ou erro, limpar estado
+        if (mounted) {
+          setUser(null);
+          setCandidato(null);
+          setLoading(false);
+        }
       }
-    }
+    };
+
+    initializeAuth();
+
+    // Escutar mudanças na autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+
+        console.log('Candidato auth state change:', event);
+
+        try {
+          if (event === 'SIGNED_IN' && session?.user) {
+            setUser(session.user);
+            
+            // Aguardar um pouco antes de tentar carregar o candidato
+            setTimeout(async () => {
+              if (mounted) {
+                await loadCandidatoByAuthId(session.user.id);
+              }
+            }, 1000);
+            
+          } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
+            setUser(null);
+            setCandidato(null);
+          } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+            // Revalidar candidato após refresh do token
+            setUser(session.user);
+            await loadCandidatoByAuthId(session.user.id);
+          }
+        } catch (error) {
+          console.error('Erro no auth state change do candidato:', error);
+          if (mounted) {
+            setUser(null);
+            setCandidato(null);
+          }
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
+
+  const loadCandidatoByAuthId = async (authUserId: string) => {
+    try {
+      setLoading(true);
+      
+      // Timeout para busca do candidato
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout ao buscar candidato')), 5000)
+      );
+
+      const candidatoPromise = supabase
+        .from('candidatos_externos')
+        .select('*')
+        .eq('auth_user_id', authUserId)
+        .single();
+
+      const { data, error } = await Promise.race([candidatoPromise, timeoutPromise]) as any;
+
+      if (error) {
+        // Se não encontrar o candidato, isso é normal durante o registro
+        if (error.code === 'PGRST116') {
+          return;
+        }
+        console.error('Erro ao carregar candidato:', error);
+        return;
+      }
+
+      if (data) {
+        setCandidato(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar candidato por auth ID:', error);
+      // Em caso de erro, tentar refresh da sessão
+      try {
+        await supabase.auth.refreshSession();
+      } catch (refreshError) {
+        console.error('Erro ao fazer refresh da sessão do candidato:', refreshError);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const clearError = () => setError(null);
 
@@ -76,40 +176,23 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
     setError(null);
 
     try {
-      // Hash da senha (em produção, usar bcrypt)
-      const senhaHash = btoa(senha); // Simplificado para demo
+      // Fazer login no Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password: senha
+      });
 
-      const response = await CandidatosExternosService.buscarPorEmail(email);
-      
-      if (!response.success) {
-        setError(response.error || 'Erro ao fazer login');
+      if (authError) {
+        setError(authError.message);
         return false;
       }
 
-      if (!response.candidato) {
-        setError('Candidato não encontrado');
+      if (!authData.user) {
+        setError('Erro na autenticação');
         return false;
       }
 
-      // Verificar senha (simplificado)
-      // Em produção, usar bcrypt.compare()
-      // Como o tipo não inclui senha_hash, vamos buscar novamente com a senha
-      const candidatoCompleto = await CandidatosExternosService.buscarPorEmail(email);
-      if (!candidatoCompleto.success || !candidatoCompleto.candidato) {
-        setError('Erro ao verificar senha');
-        return false;
-      }
-      
-      // Aqui precisaríamos de uma função específica para verificar senha
-      // Por enquanto, vamos assumir que a senha está correta se o candidato foi encontrado
-      // Em produção, implementar verificação de hash
-
-      setCandidato(response.candidato);
-      localStorage.setItem('candidato_externo', JSON.stringify(response.candidato));
-      
-      // Carregar candidaturas
-      await loadCandidaturas();
-      
+      // O candidato será carregado automaticamente pelo listener onAuthStateChange
       return true;
     } catch (error) {
       console.error('Erro no login:', error);
@@ -125,21 +208,90 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
     setError(null);
 
     try {
-      // Hash da senha (em produção, usar bcrypt)
-      const senhaHash = btoa(data.senha_hash); // Simplificado para demo
-
-      const response = await CandidatosExternosService.criar({
-        ...data,
-        senha_hash: senhaHash
+      // 1. Criar usuário no Supabase Auth (sem confirmação de email)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.senha_hash,
+        options: {
+          data: {
+            nome: data.nome,
+            tipo: 'candidato_externo'
+          }
+        }
       });
 
-      if (!response.success) {
-        setError(response.error || 'Erro ao criar conta');
+      if (authError) {
+        setError(authError.message);
         return false;
       }
 
-      // Fazer login automaticamente após registro
-      return await login(data.email, data.senha_hash);
+      if (!authData.user) {
+        setError('Erro ao criar conta');
+        return false;
+      }
+
+      // 2. Criar registro na tabela candidatos_externos
+      const candidatoData = {
+        nome: data.nome,
+        email: data.email,
+        auth_user_id: authData.user.id,
+        telefone: data.telefone,
+        data_nascimento: data.data_nascimento,
+        endereco: data.endereco,
+        cidade: data.cidade,
+        estado: data.estado,
+        cep: data.cep
+      };
+
+      const response = await CandidatosExternosService.criar(candidatoData);
+
+      if (!response.success) {
+        setError(response.error || 'Erro ao criar perfil');
+        return false;
+      }
+
+      // 3. Se já temos sessão, carregar o candidato criado
+      if (authData.session) {
+        // Carregar o candidato que acabamos de criar
+        setTimeout(async () => {
+          await loadCandidatoByAuthId(authData.user.id);
+        }, 500);
+        
+        return true;
+      }
+
+      // Aguardar um pouco para o Supabase processar
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Verificar novamente se temos sessão
+      const { data: sessionCheck } = await supabase.auth.getSession();
+      if (sessionCheck.session) {
+        return true;
+      }
+
+      // Tentar fazer login manual
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.senha_hash
+      });
+
+      if (loginError) {
+        if (loginError.message.includes('Email not confirmed')) {
+          setError('Conta criada! Verifique seu email para confirmar, ou tente fazer login.');
+        } else {
+          setError('Conta criada com sucesso! Faça login na próxima tela.');
+        }
+        return true; // Usuário foi criado, só não conseguiu logar automaticamente
+      }
+
+      if (loginData.session) {
+        // Carregar o candidato após login
+        setTimeout(async () => {
+          await loadCandidatoByAuthId(authData.user.id);
+        }, 500);
+      }
+
+      return true;
     } catch (error) {
       console.error('Erro no registro:', error);
       setError('Erro interno do servidor');
@@ -149,14 +301,17 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
     }
   };
 
-  const logout = () => {
-    setCandidato(null);
-    setCandidaturas([]);
-    localStorage.removeItem('candidato_externo');
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      // Os estados serão limpos automaticamente pelo listener onAuthStateChange
+    } catch (error) {
+      console.error('Erro no logout:', error);
+    }
   };
 
   const updateProfile = async (data: UpdateCandidatoExterno): Promise<boolean> => {
-    if (!candidato) return false;
+    if (!candidato || !user) return false;
 
     setLoading(true);
     setError(null);
@@ -169,15 +324,8 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
         return false;
       }
 
-      // Atualizar candidato no estado
+      // Atualizar estado local
       setCandidato(prev => prev ? { ...prev, ...data } : null);
-      
-      // Atualizar no localStorage
-      const candidatoAtualizado = candidato ? { ...candidato, ...data } : null;
-      if (candidatoAtualizado) {
-        localStorage.setItem('candidato_externo', JSON.stringify(candidatoAtualizado));
-      }
-
       return true;
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
@@ -189,14 +337,14 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
   };
 
   const uploadCurriculo = async (file: File): Promise<boolean> => {
-    if (!candidato) return false;
+    if (!candidato || !user) return false;
 
     setLoading(true);
     setError(null);
 
     try {
       // Upload real para Supabase Storage
-      const fileName = `${Date.now()}_${file.name}`;
+      const fileName = `${user.id}_${Date.now()}_${file.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('curriculos')
         .upload(fileName, file, {
@@ -229,7 +377,7 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
         return false;
       }
 
-      // Atualizar candidato no estado
+      // Atualizar estado local
       setCandidato(prev => prev ? {
         ...prev,
         curriculo_url: curriculoUrl,
@@ -238,22 +386,9 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
         curriculo_tipo: file.type
       } : null);
 
-      // Atualizar no localStorage
-      const candidatoAtualizado = candidato ? {
-        ...candidato,
-        curriculo_url: curriculoUrl,
-        curriculo_nome: file.name,
-        curriculo_tamanho: file.size,
-        curriculo_tipo: file.type
-      } : null;
-      
-      if (candidatoAtualizado) {
-        localStorage.setItem('candidato_externo', JSON.stringify(candidatoAtualizado));
-      }
-
       return true;
     } catch (error) {
-      console.error('Erro ao fazer upload do currículo:', error);
+      console.error('Erro no upload:', error);
       setError('Erro interno do servidor');
       return false;
     } finally {
@@ -262,30 +397,34 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
   };
 
   const aplicarVaga = async (vagaId: string, observacoes?: string, curriculoUrl?: string): Promise<boolean> => {
-    if (!candidato) return false;
+    if (!candidato || !user) return false;
 
     setLoading(true);
     setError(null);
 
     try {
-      const response = await CandidatosExternosService.aplicarVaga(
-        candidato.id,
-        vagaId,
-        observacoes,
-        curriculoUrl
-      );
+      // Usar a função RPC do Supabase
+      const { data, error } = await supabase.rpc('aplicar_candidato_vaga', {
+        p_candidato_id: candidato.id,
+        p_vaga_id: vagaId,
+        p_observacoes: observacoes || '',
+        p_curriculo_url: curriculoUrl
+      });
 
-      if (!response.success) {
-        setError(response.error || 'Erro ao aplicar na vaga');
+      if (error) {
+        console.error('Erro ao aplicar em vaga:', error);
+        setError(error.message || 'Erro ao se candidatar');
         return false;
       }
 
-      // Recarregar candidaturas
-      await loadCandidaturas();
+      if (!data?.success) {
+        setError(data?.error || 'Erro ao se candidatar');
+        return false;
+      }
 
       return true;
     } catch (error) {
-      console.error('Erro ao aplicar na vaga:', error);
+      console.error('Erro ao aplicar para vaga:', error);
       setError('Erro interno do servidor');
       return false;
     } finally {
@@ -297,35 +436,28 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
     if (!candidato) return false;
 
     try {
-      const response = await CandidatosExternosService.verificarCandidatura(candidato.id, vagaId);
-      return response.success && response.candidatou;
+      const { data, error } = await supabase.rpc('verificar_candidatura_existente', {
+        p_candidato_id: candidato.id,
+        p_vaga_id: vagaId
+      });
+
+      if (error) {
+        console.error('Erro ao verificar candidatura:', error);
+        return false;
+      }
+
+      return data?.existe || false;
     } catch (error) {
       console.error('Erro ao verificar candidatura:', error);
       return false;
     }
   };
 
-  const loadCandidaturas = async (): Promise<void> => {
-    if (!candidato) return;
-
-    try {
-      const response = await CandidatosExternosService.buscarCandidaturas(candidato.id);
-      
-      if (response.success) {
-        setCandidaturas(response.candidaturas);
-      } else {
-        console.error('Erro ao carregar candidaturas:', response.error);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar candidaturas:', error);
-    }
-  };
-
   const value: CandidatoExternoContextType = {
     candidato,
-    candidaturas,
     loading,
     error,
+    user,
     login,
     register,
     logout,
@@ -333,9 +465,8 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
     uploadCurriculo,
     aplicarVaga,
     verificarCandidatura,
-    loadCandidaturas,
-    isAuthenticated: !!candidato,
-    clearError
+    isAuthenticated: !!user,
+    clearError,
   };
 
   return (

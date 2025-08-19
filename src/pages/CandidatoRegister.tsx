@@ -23,7 +23,7 @@ const CandidatoRegister: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  const returnUrl = location.state?.returnUrl || '/candidato/dashboard';
+  const returnUrl = location.state?.returnUrl || '/';
 
   useEffect(() => {
     if (isAuthenticated) {

@@ -468,6 +468,7 @@ export interface CandidatoExterno {
   id: string;
   nome: string;
   email: string;
+  auth_user_id: string;
   telefone?: string;
   data_nascimento?: string;
   endereco?: string;
@@ -488,7 +489,8 @@ export interface CandidatoExterno {
 export interface CreateCandidatoExterno {
   nome: string;
   email: string;
-  senha_hash: string;
+  senha_hash?: string; // Usado apenas para criação do usuário Auth
+  auth_user_id?: string; // Será preenchido depois da criação do usuário Auth
   telefone?: string;
   data_nascimento?: string;
   endereco?: string;

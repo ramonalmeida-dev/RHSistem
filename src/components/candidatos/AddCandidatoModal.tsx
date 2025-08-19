@@ -49,8 +49,6 @@ export function AddCandidatoModal({ isOpen, onClose, onSuccess, vagaId, vagaCarg
     setLoading(true);
 
     try {
-      console.log('Iniciando salvamento do candidato:', { formData, vagaId });
-      
       // Primeiro, inserir o candidato
       const { data: candidatoData, error: candidatoError } = await supabase
         .from('candidatos')
@@ -66,8 +64,6 @@ export function AddCandidatoModal({ isOpen, onClose, onSuccess, vagaId, vagaCarg
         console.error('Erro ao inserir candidato:', candidatoError);
         throw candidatoError;
       }
-
-      console.log('Candidato inserido:', candidatoData);
 
       // Depois, criar a relação candidato-vaga
       const { error: relacaoError } = await supabase
@@ -106,8 +102,6 @@ export function AddCandidatoModal({ isOpen, onClose, onSuccess, vagaId, vagaCarg
           throw new Error(saveResult.error || 'Erro ao salvar referência do currículo');
         }
       }
-
-      console.log('Candidato e currículo salvos com sucesso');
 
       toast({
         title: "Candidato adicionado",

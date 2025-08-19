@@ -185,6 +185,9 @@ const VagaPublica: React.FC = () => {
         setCurriculoFile(null);
         setCurriculoSelecionado('arquivo');
         setObservacoes('');
+        
+        // Mostrar mensagem de sucesso
+        alert('Candidatura enviada com sucesso! A empresa entrará em contato caso você seja selecionado.');
       }
     } catch (error) {
       console.error('Erro ao aplicar na vaga:', error);
@@ -600,7 +603,7 @@ const VagaPublica: React.FC = () => {
                     <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
                     <p className="text-green-600 font-medium">Você já se candidatou para esta vaga!</p>
                     <p className="text-sm text-gray-600 mt-1">
-                      Acompanhe o status da sua candidatura no seu perfil.
+                      A empresa entrará em contato caso você seja selecionado.
                     </p>
                   </div>
                 ) : isAuthenticated ? (

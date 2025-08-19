@@ -17,7 +17,6 @@ import VagaPublica from "./pages/VagaPublica";
 import CandidatoLogin from "./pages/CandidatoLogin";
 import CandidatoRegister from "./pages/CandidatoRegister";
 import CandidatoRecuperarSenha from "./pages/CandidatoRecuperarSenha";
-import CandidatoDashboard from "./pages/CandidatoDashboard";
 
 import NotFound from "./pages/NotFound";
 
@@ -39,7 +38,7 @@ const App = () => (
               <Route path="/candidato/register" element={<CandidatoRegister />} />
               <Route path="/candidato/recuperar-senha" element={<CandidatoRecuperarSenha />} />
               
-              {/* Rotas protegidas do sistema interno */}
+              {/* Rotas protegidas do sistema administrativo */}
               <Route path="/" element={
                 <ProtectedRoute>
                   <Index />
@@ -77,10 +76,6 @@ const App = () => (
                   <Financeiro />
                 </ProtectedRoute>
               } />
-              
-              {/* Rotas protegidas do candidato externo */}
-              <Route path="/candidato/dashboard" element={<CandidatoDashboard />} />
-
               
               {/* Redirecionar rotas não encontradas */}
               <Route path="*" element={<NotFound />} />

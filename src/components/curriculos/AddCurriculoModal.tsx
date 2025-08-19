@@ -78,7 +78,17 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
         throw candidatoError;
       }
 
-      console.log('Candidato inserido:', candidatoData);
+      if (candidatoData) {
+        setCandidato({
+          id: candidatoData.id,
+          nome: candidatoData.nome || 'Candidato',
+          email: candidatoData.email || '',
+          telefone: candidatoData.telefone || '',
+          deleted_at: candidatoData.deleted_at,
+          created_at: candidatoData.created_at,
+          updated_at: candidatoData.updated_at
+        });
+      }
 
       // Se há um currículo, fazer upload
       let url_storage = "";

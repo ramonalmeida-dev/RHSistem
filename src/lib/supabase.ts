@@ -1,10 +1,45 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Configuração do Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ustodblurmtaoexntmru.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzdG9kYmx1cm10YW9leG50bXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxOTIzNzcsImV4cCI6MjA3MDc2ODM3N30.MQ8P-GR0uCRUQHuRNDUxbVoLbEf2mFQN5K37qM3We2k';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    // Configurações de sessão melhoradas
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  },
+  global: {
+    // Headers globais com timeout
+    headers: {
+      'X-Client-Info': 'lotus-recruit-hub@1.0.0',
+    },
+    // Timeout de 10 segundos para requests
+    fetch: (url, options = {}) => {
+      return fetch(url, {
+        ...options,
+        signal: AbortSignal.timeout(10000), // 10 segundos timeout
+      });
+    },
+  },
+  db: {
+    // Schema padrão
+    schema: 'public',
+  },
+});
+
+// Adicionar listener para debug de problemas de auth
+if (import.meta.env.DEV) {
+  supabase.auth.onAuthStateChange((event, session) => {
+    console.log('Supabase Auth Event:', event, {
+      hasSession: !!session,
+      expiresAt: session?.expires_at,
+      user: session?.user?.email,
+    });
+  });
+}
 
 // Tipos para o frontend
 export interface ApiResponse<T> {
