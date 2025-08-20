@@ -75,15 +75,31 @@ export async function authenticateRequest(req: Request): Promise<{ payload: any;
     return null;
   }
 
-  const payload = await verifyJWT(token);
-  if (!payload) {
+  // Verificar JWT com Supabase diretamente
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+  );
+
+  // Usar o token para fazer uma consulta autenticada
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  
+  if (error || !user) {
     return null;
   }
 
+  // Buscar tipo do usuário na tabela usuarios
+  const { data: userData } = await supabase
+    .from('usuarios')
+    .select('tipo')
+    .eq('id', user.id)
+    .single();
+
   return {
-    payload,
-    userId: payload.sub,
-    isAdmin: payload.tipo === 'admin'
+    payload: user,
+    userId: user.id,
+    isAdmin: userData?.tipo === 'admin'
   };
 }
 

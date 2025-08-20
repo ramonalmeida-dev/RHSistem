@@ -43,9 +43,11 @@ Deno.serve(async (req: Request) => {
       }
 
       // Filtros baseados em permissões
-      if (!auth.isAdmin && consultor_id) {
+      if (!auth.isAdmin) {
+        // Consultores só podem ver suas próprias vagas
         query = query.eq('consultor_id', auth.userId);
       } else if (consultor_id) {
+        // Admins podem filtrar por consultor específico
         query = query.eq('consultor_id', consultor_id);
       }
 

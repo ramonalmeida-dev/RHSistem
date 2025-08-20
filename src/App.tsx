@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
 import Clientes from "./pages/Clientes";
+import Consultores from "./pages/Consultores";
 import Vagas from "./pages/Vagas";
 import Curriculos from "./pages/Curriculos";
 import PosicoesFechadas from "./pages/relatorios/PosicoesFechadas";
@@ -48,6 +49,12 @@ const App = () => (
               <Route path="/clientes" element={
                 <ProtectedRoute>
                   <Clientes />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/consultores" element={
+                <ProtectedRoute requireAdmin>
+                  <Consultores />
                 </ProtectedRoute>
               } />
               

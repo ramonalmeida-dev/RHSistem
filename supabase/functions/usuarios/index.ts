@@ -87,6 +87,7 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'GET') {
       const url = new URL(req.url);
       const id = url.searchParams.get('id');
+      const tipo = url.searchParams.get('tipo');
 
       if (id) {
         // Buscar usuário específico
@@ -151,10 +152,17 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        const { data: users, error } = await supabase
+        let query = supabase
           .from('usuarios')
           .select('*')
           .order('created_at', { ascending: false });
+        
+        // Filtrar por tipo se especificado
+        if (tipo) {
+          query = query.eq('tipo', tipo);
+        }
+
+        const { data: users, error } = await query;
 
         if (error) {
           throw error;
@@ -207,37 +215,50 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Verificar se email já existe
-      const { data: existingUser } = await supabase
-        .from('usuarios')
-        .select('id')
-        .eq('email', email)
-        .single();
+      // Usar Supabase Admin para criar usuário no auth
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      );
 
-      if (existingUser) {
+      // Criar usuário no auth
+      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: email,
+        password: password,
+        email_confirm: true,
+        user_metadata: {
+          nome: nome,
+          tipo: tipo
+        }
+      });
+
+      if (authError) {
         return new Response(
           JSON.stringify({
             error: {
-              message: 'Email já cadastrado',
-              code: 'EMAIL_EXISTS'
+              message: authError.message,
+              code: 'AUTH_ERROR'
             }
           }),
           {
-            status: 409,
+            status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           }
         );
       }
 
-      // Hash da senha
-      const bcrypt = await import('https://deno.land/x/bcrypt@v0.4.1/mod.ts');
-      const senha_hash = await bcrypt.hash(password);
-
-      const { data: newUser, error } = await supabase
+      // Criar ou atualizar registro na tabela usuarios
+      const { data: newUser, error: dbError } = await supabase
         .from('usuarios')
-        .insert({
+        .upsert({
+          id: authUser.user.id,
           email,
-          senha_hash,
           nome,
           tipo,
           ativo: ativo ?? true
@@ -245,14 +266,14 @@ Deno.serve(async (req: Request) => {
         .select()
         .single();
 
-      if (error) {
-        throw error;
+      if (dbError) {
+        // Se falhou para criar na tabela, limpar do auth
+        await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+        throw dbError;
       }
 
-      const { senha_hash: _, ...userWithoutPassword } = newUser;
-
       return new Response(
-        JSON.stringify({ data: userWithoutPassword }),
+        JSON.stringify({ data: newUser }),
         {
           status: 201,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

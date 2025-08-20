@@ -69,6 +69,7 @@ interface Cliente {
 interface Usuario {
   id: string;
   nome: string;
+  tipo: 'admin' | 'consultor';
 }
 
 export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
@@ -109,11 +110,12 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
           .eq('ativo', true)
           .order('razao_social');
 
-        // Carregar usuários (consultores)
+        // Carregar usuários (consultores e admins)
         const { data: usuariosData } = await supabase
           .from('usuarios')
-          .select('id, nome')
+          .select('id, nome, tipo')
           .eq('ativo', true)
+          .in('tipo', ['consultor', 'admin'])
           .order('nome');
 
         setClientes(clientesData || []);
@@ -129,6 +131,7 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
   }, [isOpen]);
 
   const handleInputChange = (field: keyof VagaData, value: string | number | PerguntaQuestionario[]) => {
+    console.log(`Mudança no campo ${field}:`, value);
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -609,7 +612,11 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                 </Label>
                 <Select
                   value={formData.consultorId}
-                  onValueChange={(value) => handleInputChange("consultorId", value)}
+                  onValueChange={(value) => {
+                    console.log('Select consultorId value:', value);
+                    console.log('Current formData.consultorId:', formData.consultorId);
+                    handleInputChange("consultorId", value);
+                  }}
                 >
                   <SelectTrigger className={errors.consultorId ? "border-destructive" : ""}>
                     <SelectValue placeholder="Selecione o consultor" />
@@ -617,7 +624,7 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                   <SelectContent>
                     {usuarios.map((usuario) => (
                       <SelectItem key={usuario.id} value={usuario.id}>
-                        {usuario.nome}
+                        {usuario.nome} ({usuario.tipo === 'admin' ? 'Administrador' : 'Consultor'})
                       </SelectItem>
                     ))}
                   </SelectContent>

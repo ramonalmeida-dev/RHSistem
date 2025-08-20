@@ -42,6 +42,12 @@ const mainNavItems: NavItem[] = [
     icon: Building2,
   },
   {
+    title: "Usuários",
+    href: "/consultores",
+    icon: Users,
+    adminOnly: true,
+  },
+  {
     title: "Vagas",
     href: "/vagas", 
     icon: Briefcase,
