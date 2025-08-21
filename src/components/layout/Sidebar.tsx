@@ -62,11 +62,6 @@ const mainNavItems: NavItem[] = [
 
 const reportNavItems: NavItem[] = [
   {
-    title: "Vagas Abertas",
-    href: "/relatorios/vagas-abertas",
-    icon: Search,
-  },
-  {
     title: "Posições Fechadas",
     href: "/relatorios/posicoes-fechadas",
     icon: Calendar,

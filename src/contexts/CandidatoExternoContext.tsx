@@ -106,7 +106,7 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
       async (event, session) => {
         if (!mounted) return;
 
-        console.log('Candidato auth state change:', event);
+        // Log removido para limpar o console
 
         try {
           if (event === 'SIGNED_IN' && session?.user) {

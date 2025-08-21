@@ -33,7 +33,7 @@ Deno.serve(async (req: Request) => {
         .from('vagas')
         .select(`
           *,
-          empresa:clientes(razao_social, cnpj),
+          empresa:clientes(razao_social, cnpj, contato, celular, email),
           consultor:usuarios(nome, email)
         `)
         .order('created_at', { ascending: false });
@@ -81,9 +81,6 @@ Deno.serve(async (req: Request) => {
       const { 
         numero_vaga,
         empresa_id,
-        contato_envio_cv,
-        email,
-        celular,
         cargo,
         salario,
         local_trabalho,
@@ -148,9 +145,6 @@ Deno.serve(async (req: Request) => {
         .insert({
           numero_vaga,
           empresa_id,
-          contato_envio_cv,
-          email,
-          celular,
           cargo,
           salario,
           local_trabalho,
@@ -187,9 +181,6 @@ Deno.serve(async (req: Request) => {
         id,
         numero_vaga,
         empresa_id,
-        contato_envio_cv,
-        email,
-        celular,
         cargo,
         salario,
         local_trabalho,
@@ -270,9 +261,6 @@ Deno.serve(async (req: Request) => {
       const updateData: any = {};
       if (numero_vaga !== undefined) updateData.numero_vaga = numero_vaga;
       if (empresa_id !== undefined) updateData.empresa_id = empresa_id;
-      if (contato_envio_cv !== undefined) updateData.contato_envio_cv = contato_envio_cv;
-      if (email !== undefined) updateData.email = email;
-      if (celular !== undefined) updateData.celular = celular;
       if (cargo !== undefined) updateData.cargo = cargo;
       if (salario !== undefined) updateData.salario = salario;
       if (local_trabalho !== undefined) updateData.local_trabalho = local_trabalho;

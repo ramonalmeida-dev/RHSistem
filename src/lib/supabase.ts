@@ -16,17 +16,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Adicionar listener para debug de problemas de auth
 if (import.meta.env.DEV) {
   supabase.auth.onAuthStateChange((event, session) => {
-    console.log('Supabase Auth Event:', event, {
-      hasSession: !!session,
-      expiresAt: session?.expires_at,
-      user: session?.user?.email,
-      timestamp: new Date().toISOString(),
-    });
-    
-    // Alertar sobre refresh desnecessários
-    if (event === 'TOKEN_REFRESHED' && !session) {
-      console.warn('Token refresh triggered without session - this might be unnecessary');
-    }
+    // Logs removidos para limpar o console
   });
 }
 

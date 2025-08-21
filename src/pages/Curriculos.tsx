@@ -143,99 +143,52 @@ const Curriculos = () => {
   const itemsPerPage = 10;
 
   // Carregar currículos do banco com paginação
-  const loadCurriculos = async () => {
-    if (searchTerm && searchTerm.trim() !== "") {
-      setSearching(true);
-    } else {
-      setLoading(true);
-    }
-    setError(null);
-    
+  const loadCurriculos = async (searchTerm = '', offset = 0) => {
     try {
-      console.log('Iniciando busca com termo:', searchTerm);
+      setLoading(true);
       
-      let query = supabase
-        .from('banco_curriculos')
-        .select(`
-          *,
-          candidato:candidatos(id, nome, email, telefone)
-        `, { count: 'exact' });
-
-      // Aplicar filtros básicos primeiro
-      if (selectedArea !== "todas") {
-        query = query.eq('area_atuacao', selectedArea);
-      }
-      if (selectedDisponibilidade !== "todas") {
-        query = query.eq('disponibilidade', selectedDisponibilidade);
-      }
-      if (selectedStatus !== "todas") {
-        query = query.eq('status', selectedStatus);
-      }
-
-      // Se há busca ativa, carregar todos os dados para filtrar no frontend
-      let data, error, count;
-      if (searchTerm && searchTerm.trim() !== "") {
-        console.log('Carregando todos os dados para busca no frontend');
-        const result = await query.order('created_at', { ascending: false });
-        data = result.data;
-        error = result.error;
-        count = result.count;
-      } else {
-        // Calcular offset para paginação apenas quando não há busca
-        const offset = (currentPage - 1) * itemsPerPage;
-        console.log('Executando query com offset:', offset, 'limit:', itemsPerPage);
-        
-        const result = await query
+      if (searchTerm.trim()) {
+        // Busca com termo de pesquisa
+        const { data, error, count } = await supabase
+          .from('banco_curriculos')
+          .select(`
+            *,
+            candidato:candidatos(id, nome, email, telefone)
+          `, { count: 'exact' })
+          .ilike('nome_arquivo', `%${searchTerm}%`)
+          .or(`area_atuacao.ilike.%${searchTerm}%,formacao.ilike.%${searchTerm}%,localizacao.ilike.%${searchTerm}%`)
           .order('created_at', { ascending: false })
           .range(offset, offset + itemsPerPage - 1);
+
+        if (error) throw error;
         
-        data = result.data;
-        error = result.error;
-        count = result.count;
+        setCurriculos(data || []);
+        setTotalItems(count || 0);
+      } else {
+        // Carregar todos os dados para busca no frontend
+        const { data, error, count } = await supabase
+          .from('banco_curriculos')
+          .select(`
+            *,
+            candidato:candidatos(id, nome, email, telefone)
+          `, { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(offset, offset + itemsPerPage - 1);
+
+        if (error) throw error;
+        
+        setCurriculos(data || []);
+        setTotalItems(count || 0);
       }
-
-      console.log('Resultado da query:', { data: data?.length, error, count });
-
-      if (error) {
-        console.error('Erro detalhado ao buscar currículos:', error);
-        setError(`Erro ao carregar currículos: ${error.message}`);
-        setCurriculos([]);
-        setTotalItems(0);
-        setTotalPages(1);
-        return;
-      }
-
-      // Filtrar por busca no frontend se necessário
-      let filteredData = data || [];
-      if (searchTerm && searchTerm.trim() !== "") {
-        const searchLower = searchTerm.trim().toLowerCase();
-        filteredData = filteredData.filter(curriculo => 
-          (curriculo.candidato?.nome || '').toLowerCase().includes(searchLower) ||
-          (curriculo.area_atuacao || '').toLowerCase().includes(searchLower) ||
-          (curriculo.formacao || '').toLowerCase().includes(searchLower)
-        );
-        console.log('Dados filtrados no frontend:', filteredData.length);
-      }
-
-      setCurriculos(filteredData);
-      setTotalItems(filteredData.length);
-      setTotalPages(Math.ceil(filteredData.length / itemsPerPage));
-      
-      console.log('Estado atualizado:', { 
-        curriculos: filteredData.length, 
-        totalItems: filteredData.length, 
-        totalPages: Math.ceil(filteredData.length / itemsPerPage) 
-      });
-      
     } catch (error) {
       console.error('Erro ao carregar currículos:', error);
-      setError('Erro interno ao carregar currículos');
-      setCurriculos([]);
-      setTotalItems(0);
-      setTotalPages(1);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os currículos.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
-      setSearching(false);
     }
   };
 

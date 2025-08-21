@@ -49,9 +49,6 @@ export interface Vaga {
   id: string;
   numero_vaga: string;
   empresa_id: string;
-  contato_envio_cv?: string;
-  email?: string;
-  celular?: string;
   cargo: string;
   salario?: string;
   local_trabalho?: string;
@@ -210,9 +207,6 @@ export interface CreateCliente {
 export interface CreateVaga {
   numero_vaga: string;
   empresa_id: string;
-  contato_envio_cv?: string;
-  email?: string;
-  celular?: string;
   cargo: string;
   salario?: string;
   local_trabalho?: string;
@@ -290,9 +284,6 @@ export interface UpdateCliente {
 export interface UpdateVaga {
   numero_vaga?: string;
   empresa_id?: string;
-  contato_envio_cv?: string;
-  email?: string;
-  celular?: string;
   cargo?: string;
   salario?: string;
   local_trabalho?: string;

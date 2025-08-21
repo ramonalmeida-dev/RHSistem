@@ -15,11 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Briefcase, 
   Building2, 
-  Mail, 
-  Phone, 
   MapPin, 
   Calendar, 
-  User, 
+  User,
   FileText,
   DollarSign,
   MessageSquare
@@ -42,9 +40,6 @@ interface AddVagaModalProps {
 interface VagaData {
   numeroVaga: string;
   empresaId: string;
-  contatoEnvioCv: string;
-  email: string;
-  celular: string;
   cargo: string;
   salario: string;
   localTrabalho: string;
@@ -76,9 +71,6 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
   const [formData, setFormData] = useState<VagaData>({
     numeroVaga: "",
     empresaId: "",
-    contatoEnvioCv: "",
-    email: "",
-    celular: "",
     cargo: "",
     salario: "",
     localTrabalho: "",
@@ -131,7 +123,6 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
   }, [isOpen]);
 
   const handleInputChange = (field: keyof VagaData, value: string | number | PerguntaQuestionario[]) => {
-    console.log(`Mudança no campo ${field}:`, value);
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -148,20 +139,6 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
 
     if (!formData.empresaId || formData.empresaId === "") {
       newErrors.empresaId = "Empresa é obrigatória" as any;
-    }
-
-    if (!formData.contatoEnvioCv.trim()) {
-      newErrors.contatoEnvioCv = "Contato é obrigatório";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "E-mail é obrigatório";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "E-mail deve ser válido";
-    }
-
-    if (!formData.celular.trim()) {
-      newErrors.celular = "Celular é obrigatório";
     }
 
     if (!formData.cargo.trim()) {
@@ -239,9 +216,6 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
     setFormData({
       numeroVaga: "",
       empresaId: "",
-      contatoEnvioCv: "",
-      email: "",
-      celular: "",
       cargo: "",
       salario: "",
       localTrabalho: "",
@@ -259,11 +233,6 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
     });
     setErrors({});
     onClose();
-  };
-
-  const formatCelular = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    return numbers.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
   };
 
   return (
@@ -309,7 +278,9 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                 </Label>
                 <Select
                   value={formData.empresaId}
-                  onValueChange={(value) => handleInputChange("empresaId", value)}
+                  onValueChange={(value) => {
+                    handleInputChange("empresaId", value);
+                  }}
                 >
                   <SelectTrigger className={errors.empresaId ? "border-destructive" : ""}>
                     <SelectValue placeholder="Selecione a empresa" />
@@ -324,64 +295,6 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                 </Select>
                 {errors.empresaId && (
                   <p className="text-sm text-destructive">{errors.empresaId}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="contatoEnvioCv" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Contato *
-                </Label>
-                <Input
-                  id="contatoEnvioCv"
-                  placeholder="Nome do contato"
-                  value={formData.contatoEnvioCv}
-                  onChange={(e) => handleInputChange("contatoEnvioCv", e.target.value)}
-                  className={errors.contatoEnvioCv ? "border-destructive" : ""}
-                />
-                {errors.contatoEnvioCv && (
-                  <p className="text-sm text-destructive">{errors.contatoEnvioCv}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  E-mail *
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="contato@empresa.com.br"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  className={errors.email ? "border-destructive" : ""}
-                />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="celular" className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  Celular *
-                </Label>
-                <Input
-                  id="celular"
-                  placeholder="(XX) XXXXX-XXXX"
-                  value={formData.celular}
-                  onChange={(e) => {
-                    const formatted = formatCelular(e.target.value);
-                    handleInputChange("celular", formatted);
-                  }}
-                  maxLength={15}
-                  className={errors.celular ? "border-destructive" : ""}
-                />
-                {errors.celular && (
-                  <p className="text-sm text-destructive">{errors.celular}</p>
                 )}
               </div>
             </div>
@@ -613,8 +526,6 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                 <Select
                   value={formData.consultorId}
                   onValueChange={(value) => {
-                    console.log('Select consultorId value:', value);
-                    console.log('Current formData.consultorId:', formData.consultorId);
                     handleInputChange("consultorId", value);
                   }}
                 >

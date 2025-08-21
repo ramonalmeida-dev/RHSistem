@@ -595,7 +595,13 @@ const VagaPublica: React.FC = () => {
                           <div>
                             <p className="text-xs text-gray-500 uppercase tracking-wide">Salário</p>
                             <p className="font-medium">
-                              R$ {parseFloat(vaga.salario).toLocaleString('pt-BR')}
+                              {(() => {
+                                const salarioNum = parseFloat(vaga.salario);
+                                if (isNaN(salarioNum)) {
+                                  return vaga.salario; // Retorna o valor original se não for número
+                                }
+                                return `R$ ${salarioNum.toLocaleString('pt-BR')}`;
+                              })()}
                             </p>
                           </div>
                         </div>

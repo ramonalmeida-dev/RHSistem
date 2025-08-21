@@ -56,37 +56,26 @@ const Clientes = () => {
   // Carregar clientes
   const loadClientes = async () => {
     try {
-      console.log("Iniciando carregamento de clientes...");
       setIsLoading(true);
       
-      // Usar diretamente o Supabase client
       const { data, error } = await supabase
         .from('clientes')
         .select('*')
-        .order('created_at', { ascending: false });
-      
-      console.log("Resultado da consulta:", { data, error });
-      
+        .order('razao_social');
+
       if (error) {
-        console.error("Erro na consulta:", error);
-        toast({
-          title: "Erro ao carregar clientes",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        console.log("Clientes carregados:", data);
-        setClientes(data || []);
+        throw error;
       }
+
+      setClientes(data || []);
     } catch (error) {
-      console.error("Erro ao carregar clientes:", error);
+      console.error('Erro ao carregar clientes:', error);
       toast({
-        title: "Erro ao carregar clientes",
-        description: "Erro interno do servidor",
+        title: "Erro",
+        description: "Não foi possível carregar os clientes.",
         variant: "destructive",
       });
     } finally {
-      console.log("Finalizando carregamento, isLoading = false");
       setIsLoading(false);
     }
   };
@@ -94,54 +83,47 @@ const Clientes = () => {
   // Criar novo cliente
   const handleAddCliente = async (clienteData: any) => {
     try {
-      console.log("Dados recebidos do modal:", clienteData);
+      setIsLoading(true);
       
-      // Mapear dados do modal para o formato esperado pelo backend
+      // Mapear dados do formulário para a estrutura do banco
       const mappedData = {
-        razao_social: clienteData.razaoSocial,
+        razao_social: clienteData.razao_social,
         cnpj: clienteData.cnpj,
-        inscricao_estadual: clienteData.inscricaoEstadual,
-        endereco_completo: clienteData.endereco,
-        prazo_pagamento: clienteData.prazoPagamento,
+        inscricao_estadual: clienteData.inscricao_estadual,
+        endereco_completo: clienteData.endereco_completo,
+        prazo_pagamento: clienteData.prazo_pagamento,
         contato: clienteData.contato,
         celular: clienteData.celular,
         email: clienteData.email,
         ativo: true
       };
 
-      console.log("Dados mapeados para inserção:", mappedData);
-
       const { data, error } = await supabase
         .from('clientes')
         .insert(mappedData)
         .select()
         .single();
-      
-      console.log("Resultado da inserção:", { data, error });
-      
+
       if (error) {
-        console.error("Erro na inserção:", error);
-        toast({
-          title: "Erro ao criar cliente",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        console.log("Cliente criado com sucesso:", data);
-        toast({
-          title: "Cliente criado com sucesso",
-          description: `${clienteData.razaoSocial} foi adicionado à carteira`,
-        });
-        setIsAddModalOpen(false);
-        loadClientes(); // Recarregar lista
+        throw error;
       }
-    } catch (error) {
-      console.error("Erro ao criar cliente:", error);
+
       toast({
-        title: "Erro ao criar cliente",
-        description: "Erro interno do servidor",
+        title: "Sucesso",
+        description: "Cliente criado com sucesso!",
+      });
+
+      setIsAddModalOpen(false);
+      loadClientes();
+    } catch (error) {
+      console.error('Erro ao criar cliente:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar o cliente.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
