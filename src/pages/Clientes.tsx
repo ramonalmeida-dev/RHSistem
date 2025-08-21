@@ -87,11 +87,11 @@ const Clientes = () => {
       
       // Mapear dados do formulário para a estrutura do banco
       const mappedData = {
-        razao_social: clienteData.razao_social,
+        razao_social: clienteData.razaoSocial,
         cnpj: clienteData.cnpj,
-        inscricao_estadual: clienteData.inscricao_estadual,
-        endereco_completo: clienteData.endereco_completo,
-        prazo_pagamento: clienteData.prazo_pagamento,
+        inscricao_estadual: clienteData.inscricaoEstadual,
+        endereco_completo: clienteData.endereco,
+        prazo_pagamento: clienteData.prazoPagamento,
         contato: clienteData.contato,
         celular: clienteData.celular,
         email: clienteData.email,

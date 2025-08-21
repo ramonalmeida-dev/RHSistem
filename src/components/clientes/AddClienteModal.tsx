@@ -60,9 +60,10 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
       newErrors.razaoSocial = "Razão social é obrigatória";
     }
 
-    if (!formData.endereco.trim()) {
-      newErrors.endereco = "Endereço é obrigatório";
-    }
+    // Endereço é opcional no banco
+    // if (!formData.endereco.trim()) {
+    //   newErrors.endereco = "Endereço é obrigatório";
+    // }
 
     if (!formData.cnpj.trim()) {
       newErrors.cnpj = "CNPJ é obrigatório";
@@ -70,27 +71,28 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
       newErrors.cnpj = "CNPJ deve estar no formato XX.XXX.XXX/XXXX-XX";
     }
 
-    if (!formData.inscricaoEstadual.trim()) {
-      newErrors.inscricaoEstadual = "Inscrição estadual é obrigatória";
-    }
+    // Inscrição estadual é opcional no banco
+    // if (!formData.inscricaoEstadual.trim()) {
+    //   newErrors.inscricaoEstadual = "Inscrição estadual é obrigatória";
+    // }
 
-    if (!formData.prazoPagamento) {
-      newErrors.prazoPagamento = "Prazo de pagamento é obrigatório";
-    }
+    // Prazo de pagamento é opcional no banco
+    // if (!formData.prazoPagamento) {
+    //   newErrors.prazoPagamento = "Prazo de pagamento é obrigatório";
+    // }
 
-    if (!formData.contato.trim()) {
-      newErrors.contato = "Contato é obrigatório";
-    }
+    // Contato é opcional no banco
+    // if (!formData.contato.trim()) {
+    //   newErrors.contato = "Contato é obrigatório";
+    // }
 
-    if (!formData.celular.trim()) {
-      newErrors.celular = "Celular é obrigatório";
-    } else if (!/^\(\d{2}\) \d{5}-\d{4}$/.test(formData.celular)) {
+    // Celular é opcional no banco
+    if (formData.celular.trim() && !/^\(\d{2}\) \d{5}-\d{4}$/.test(formData.celular)) {
       newErrors.celular = "Celular deve estar no formato (XX) XXXXX-XXXX";
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = "E-mail é obrigatório";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // Email é opcional no banco
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "E-mail deve ser válido";
     }
 
@@ -139,7 +141,7 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
             Cadastrar Novo Cliente
           </DialogTitle>
           <DialogDescription>
-            Preencha todas as informações do cliente para criar um novo cadastro.
+            Preencha as informações do cliente. Apenas Razão Social e CNPJ são obrigatórios.
           </DialogDescription>
         </DialogHeader>
 
@@ -166,7 +168,7 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
           <div className="space-y-2">
             <Label htmlFor="endereco" className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              Endereço Completo *
+              Endereço Completo
             </Label>
             <Textarea
               id="endereco"
@@ -207,7 +209,7 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
             <div className="space-y-2">
               <Label htmlFor="inscricaoEstadual" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
-                Inscrição Estadual *
+                Inscrição Estadual
               </Label>
               <Input
                 id="inscricaoEstadual"
@@ -226,7 +228,7 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
           <div className="space-y-2">
             <Label htmlFor="prazoPagamento" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Prazo de Pagamento *
+              Prazo de Pagamento
             </Label>
             <Select
               value={formData.prazoPagamento}
@@ -253,7 +255,7 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
           <div className="space-y-2">
             <Label htmlFor="contato" className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              Contato *
+              Contato
             </Label>
             <Input
               id="contato"
@@ -272,7 +274,7 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
             <div className="space-y-2">
               <Label htmlFor="celular" className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
-                Celular *
+                Celular
               </Label>
               <Input
                 id="celular"
@@ -293,7 +295,7 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
             <div className="space-y-2">
               <Label htmlFor="email" className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                E-mail *
+                E-mail
               </Label>
               <Input
                 id="email"
