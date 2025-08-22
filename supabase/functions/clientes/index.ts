@@ -99,6 +99,7 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'POST') {
       const { 
         razao_social, 
+        nome_fantasia,
         cnpj, 
         inscricao_estadual, 
         endereco_completo, 
@@ -106,6 +107,14 @@ Deno.serve(async (req: Request) => {
         contato, 
         celular, 
         email, 
+        // Novos campos de endereço
+        cep,
+        logradouro,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        estado,
         ativo 
       } = await req.json();
 
@@ -134,6 +143,7 @@ Deno.serve(async (req: Request) => {
         .from('clientes')
         .insert({
           razao_social,
+          nome_fantasia,
           cnpj,
           inscricao_estadual,
           endereco_completo,
@@ -141,6 +151,14 @@ Deno.serve(async (req: Request) => {
           contato,
           celular,
           email,
+          // Novos campos de endereço
+          cep,
+          logradouro,
+          numero,
+          complemento,
+          bairro,
+          cidade,
+          estado,
           ativo: ativo ?? true
         })
         .select()
@@ -158,6 +176,7 @@ Deno.serve(async (req: Request) => {
       const { 
         id, 
         razao_social, 
+        nome_fantasia,
         cnpj, 
         inscricao_estadual, 
         endereco_completo, 
@@ -165,6 +184,14 @@ Deno.serve(async (req: Request) => {
         contato, 
         celular, 
         email, 
+        // Novos campos de endereço
+        cep,
+        logradouro,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        estado,
         ativo 
       } = await req.json();
 
@@ -193,6 +220,7 @@ Deno.serve(async (req: Request) => {
 
       const updateData: any = {};
       if (razao_social !== undefined) updateData.razao_social = razao_social;
+      if (nome_fantasia !== undefined) updateData.nome_fantasia = nome_fantasia;
       if (cnpj !== undefined) updateData.cnpj = cnpj;
       if (inscricao_estadual !== undefined) updateData.inscricao_estadual = inscricao_estadual;
       if (endereco_completo !== undefined) updateData.endereco_completo = endereco_completo;
@@ -200,6 +228,14 @@ Deno.serve(async (req: Request) => {
       if (contato !== undefined) updateData.contato = contato;
       if (celular !== undefined) updateData.celular = celular;
       if (email !== undefined) updateData.email = email;
+      // Novos campos de endereço
+      if (cep !== undefined) updateData.cep = cep;
+      if (logradouro !== undefined) updateData.logradouro = logradouro;
+      if (numero !== undefined) updateData.numero = numero;
+      if (complemento !== undefined) updateData.complemento = complemento;
+      if (bairro !== undefined) updateData.bairro = bairro;
+      if (cidade !== undefined) updateData.cidade = cidade;
+      if (estado !== undefined) updateData.estado = estado;
       if (ativo !== undefined) updateData.ativo = ativo;
 
       const { data: updatedCliente, error } = await supabase

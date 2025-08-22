@@ -90,6 +90,7 @@ export interface User {
 export interface Cliente {
   id: string;
   razao_social: string;
+  nome_fantasia?: string;
   cnpj: string;
   inscricao_estadual?: string;
   endereco_completo?: string;
@@ -97,6 +98,14 @@ export interface Cliente {
   contato?: string;
   celular?: string;
   email?: string;
+  // Novos campos de endereço
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
   ativo: boolean;
   created_at: string;
   updated_at: string;

@@ -30,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 interface Cliente {
   id: string;
   razao_social: string;
+  nome_fantasia?: string;
   cnpj: string;
   inscricao_estadual?: string;
   endereco_completo?: string;
@@ -37,6 +38,14 @@ interface Cliente {
   contato?: string;
   celular?: string;
   email?: string;
+  // Novos campos de endereço
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -88,6 +97,7 @@ const Clientes = () => {
       // Mapear dados do formulário para a estrutura do banco
       const mappedData = {
         razao_social: clienteData.razaoSocial,
+        nome_fantasia: clienteData.nomeFantasia,
         cnpj: clienteData.cnpj,
         inscricao_estadual: clienteData.inscricaoEstadual,
         endereco_completo: clienteData.endereco,
@@ -95,6 +105,14 @@ const Clientes = () => {
         contato: clienteData.contato,
         celular: clienteData.celular,
         email: clienteData.email,
+        // Novos campos de endereço
+        cep: clienteData.cep,
+        logradouro: clienteData.logradouro,
+        numero: clienteData.numero,
+        complemento: clienteData.complemento,
+        bairro: clienteData.bairro,
+        cidade: clienteData.cidade,
+        estado: clienteData.estado,
         ativo: true
       };
 
@@ -136,6 +154,7 @@ const Clientes = () => {
       const mappedData = {
         id: selectedCliente.id,
         razao_social: clienteData.razaoSocial,
+        nome_fantasia: clienteData.nomeFantasia,
         cnpj: clienteData.cnpj,
         inscricao_estadual: clienteData.inscricaoEstadual,
         endereco_completo: clienteData.endereco,
@@ -143,6 +162,14 @@ const Clientes = () => {
         contato: clienteData.contato,
         celular: clienteData.celular,
         email: clienteData.email,
+        // Novos campos de endereço
+        cep: clienteData.cep,
+        logradouro: clienteData.logradouro,
+        numero: clienteData.numero,
+        complemento: clienteData.complemento,
+        bairro: clienteData.bairro,
+        cidade: clienteData.cidade,
+        estado: clienteData.estado,
         ativo: selectedCliente.ativo
       };
 
@@ -230,6 +257,12 @@ const Clientes = () => {
     const razaoSocialClean = removeMasks(cliente.razao_social);
     if (razaoSocialClean.includes(searchTermClean)) return true;
     
+    // Buscar no nome fantasia
+    if (cliente.nome_fantasia) {
+      const nomeFantasiaClean = removeMasks(cliente.nome_fantasia);
+      if (nomeFantasiaClean.includes(searchTermClean)) return true;
+    }
+    
     // Buscar no CNPJ (com e sem máscara)
     const cnpjClean = removeMasks(cliente.cnpj);
     if (cnpjClean.includes(searchTermClean)) return true;
@@ -269,6 +302,45 @@ const Clientes = () => {
 
   const formatCNPJ = (cnpj: string) => {
     return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+  };
+
+  const formatEndereco = (cliente: Cliente) => {
+    const endereco = [];
+    
+    if (cliente.logradouro) {
+      endereco.push(cliente.logradouro);
+    }
+    
+    if (cliente.numero) {
+      endereco.push(cliente.numero);
+    }
+    
+    if (cliente.complemento) {
+      endereco.push(cliente.complemento);
+    }
+    
+    if (cliente.bairro) {
+      endereco.push(cliente.bairro);
+    }
+    
+    if (cliente.cidade) {
+      endereco.push(cliente.cidade);
+    }
+    
+    if (cliente.estado) {
+      endereco.push(cliente.estado);
+    }
+    
+    if (cliente.cep) {
+      endereco.push(cliente.cep);
+    }
+    
+    // Se não há campos detalhados, usar o endereço completo antigo
+    if (endereco.length === 0 && cliente.endereco_completo) {
+      return cliente.endereco_completo;
+    }
+    
+    return endereco.length > 0 ? endereco.join(", ") : "Endereço não informado";
   };
 
   if (isLoading) {
@@ -316,7 +388,7 @@ const Clientes = () => {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar por razão social, CNPJ, email, contato ou celular..."
+                    placeholder="Buscar por razão social, nome fantasia, CNPJ, email, contato ou celular..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -354,6 +426,7 @@ const Clientes = () => {
                     <thead className="bg-muted/50">
                       <tr>
                         <th className="text-left p-3 font-medium">Razão Social</th>
+                        <th className="text-left p-3 font-medium">Nome Fantasia</th>
                         <th className="text-left p-3 font-medium">CNPJ</th>
                         <th className="text-left p-3 font-medium">Contato</th>
                         <th className="text-left p-3 font-medium">Email</th>
@@ -372,15 +445,25 @@ const Clientes = () => {
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               <Building2 className="h-4 w-4 text-primary" />
-                              <span className="font-medium">{cliente.razao_social}</span>
+                              <div>
+                                <span className="font-medium">{cliente.razao_social}</span>
+                                {cliente.nome_fantasia && (
+                                  <div className="text-sm text-muted-foreground">
+                                    {cliente.nome_fantasia}
+                                  </div>
+                                )}
+                              </div>
                             </div>
+                          </td>
+                          <td className="p-3 text-sm text-muted-foreground">
+                            {cliente.nome_fantasia || '-'}
                           </td>
                           <td className="p-3 text-sm text-muted-foreground">
                             {formatCNPJ(cliente.cnpj)}
                           </td>
                           <td className="p-3 text-sm">
                             <div>
-                              <div className="font-medium">{cliente.contato}</div>
+                              <div className="font-medium">{cliente.contato || '-'}</div>
                               {cliente.celular && (
                                 <div className="text-muted-foreground text-xs">{cliente.celular}</div>
                               )}
