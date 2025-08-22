@@ -202,8 +202,8 @@ export function EditClienteModal({ isOpen, onClose, onSubmit, cliente }: EditCli
     }
 
     // Validações de contato
-    if (formData.celular.trim() && !/^\(\d{2}\) \d{5}-\d{4}$/.test(formData.celular)) {
-      newErrors.celular = "Celular deve estar no formato (XX) XXXXX-XXXX";
+    if (formData.celular.trim() && !/^\(\d{2}\) \d{4,5}-\d{4}$/.test(formData.celular)) {
+      newErrors.celular = "Celular deve estar no formato (XX) XXXXX-XXXX ou (XX) XXXX-XXXX";
     }
 
     if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -250,7 +250,14 @@ export function EditClienteModal({ isOpen, onClose, onSubmit, cliente }: EditCli
 
   const formatCelular = (value: string) => {
     const numbers = value.replace(/\D/g, "");
-    return numbers.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+    if (numbers.length === 10) {
+      // Formato: DDD + 8 dígitos
+      return numbers.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+    } else if (numbers.length === 11) {
+      // Formato: DDD + 9 dígitos
+      return numbers.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+    }
+    return value;
   };
 
   const formatCEP = (value: string) => {
@@ -565,13 +572,13 @@ export function EditClienteModal({ isOpen, onClose, onSubmit, cliente }: EditCli
               </Label>
               <Input
                 id="celular"
-                placeholder="(XX) XXXXX-XXXX"
+                placeholder="(XX) XXXXX-XXXX ou (XX) XXXX-XXXX"
                 value={formData.celular}
                 onChange={(e) => {
                   const formatted = formatCelular(e.target.value);
                   handleInputChange("celular", formatted);
                 }}
-                maxLength={15}
+                maxLength={16}
                 className={errors.celular ? "border-destructive" : ""}
               />
               {errors.celular && (

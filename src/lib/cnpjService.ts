@@ -64,6 +64,22 @@ export class CNPJService {
         throw new Error('CNPJ não está ativo');
       }
 
+      // Formatar telefone se existir
+      let telefoneFormatado: string | undefined;
+      if (data.ddd_telefone_1) {
+        const telefoneLimpo = data.ddd_telefone_1.replace(/\D/g, '');
+        if (telefoneLimpo.length === 10) {
+          // Formato: DDD + 8 dígitos
+          telefoneFormatado = telefoneLimpo.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
+        } else if (telefoneLimpo.length === 11) {
+          // Formato: DDD + 9 dígitos
+          telefoneFormatado = telefoneLimpo.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+        } else {
+          // Se não conseguir formatar, usar como está
+          telefoneFormatado = data.ddd_telefone_1;
+        }
+      }
+
       // Formatar dados para o formato esperado pelo frontend
       const formattedData: CNPJData = {
         cnpj: data.cnpj,
@@ -78,7 +94,7 @@ export class CNPJService {
         cidade: data.municipio,
         estado: data.uf,
         email: data.email,
-        telefone: data.ddd_telefone_1 ? `${data.ddd_telefone_1}` : undefined,
+        telefone: telefoneFormatado,
         natureza_juridica: data.natureza_juridica,
         data_inicio_atividade: data.data_inicio_atividade,
         situacao: data.descricao_situacao_cadastral
