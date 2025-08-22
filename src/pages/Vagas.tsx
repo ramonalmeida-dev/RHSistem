@@ -50,7 +50,7 @@ import { VAGA_STATUS_CONFIG, VAGA_SUBSTATUS_CONFIG, VagaStatus, VagaSubstatus } 
 interface Vaga {
   id: string;
   numero_vaga: string;
-  empresa_id: number;
+  empresa_id: string;
   empresa?: {
     razao_social: string;
     cnpj: string;
@@ -71,7 +71,7 @@ interface Vaga {
   informacoes_complementares?: string;
   questionario_tecnico?: string;
   observacoes?: string;
-  consultor_id: number;
+  consultor_id: string;
   consultor?: {
     nome: string;
     email: string;
@@ -329,6 +329,11 @@ const Vagas = () => {
 
   const handleAddVaga = async (vagaData: any) => {
     try {
+      // Função auxiliar para converter string vazia em null
+      const parseDate = (dateString: string) => {
+        return dateString && dateString.trim() !== '' ? dateString : null;
+      };
+
       const { data, error } = await supabase
         .from('vagas')
         .insert({
@@ -341,11 +346,11 @@ const Vagas = () => {
           salario: vagaData.salario,
           local_trabalho: vagaData.localTrabalho,
           data_recebimento: vagaData.dataRecebimento,
-          data_formatacao_perfil: vagaData.dataFormatacaoPerfil,
-          data_divulgacao: vagaData.dataDivulgacao,
-          data_inicio_selecao: vagaData.dataInicioSelecao,
-          data_envio_curriculos: vagaData.dataEnvioCurriculos,
-          data_encerramento: vagaData.dataEncerramento,
+          data_formatacao_perfil: parseDate(vagaData.dataFormatacaoPerfil),
+          data_divulgacao: parseDate(vagaData.dataDivulgacao),
+          data_inicio_selecao: parseDate(vagaData.dataInicioSelecao),
+          data_envio_curriculos: parseDate(vagaData.dataEnvioCurriculos),
+          data_encerramento: parseDate(vagaData.dataEncerramento),
           perfil_word: vagaData.perfilWord,
           informacoes_complementares: vagaData.informacoesComplementares,
           observacoes: vagaData.observacoes,
@@ -403,6 +408,11 @@ const Vagas = () => {
     if (!selectedVaga) return;
     
     try {
+      // Função auxiliar para converter string vazia em null
+      const parseDate = (dateString: string) => {
+        return dateString && dateString.trim() !== '' ? dateString : null;
+      };
+
       const { data, error } = await supabase
         .from('vagas')
         .update({
@@ -415,11 +425,11 @@ const Vagas = () => {
           salario: vagaData.salario,
           local_trabalho: vagaData.localTrabalho,
           data_recebimento: vagaData.dataRecebimento,
-          data_formatacao_perfil: vagaData.dataFormatacaoPerfil,
-          data_divulgacao: vagaData.dataDivulgacao,
-          data_inicio_selecao: vagaData.dataInicioSelecao,
-          data_envio_curriculos: vagaData.dataEnvioCurriculos,
-          data_encerramento: vagaData.dataEncerramento,
+          data_formatacao_perfil: parseDate(vagaData.dataFormatacaoPerfil),
+          data_divulgacao: parseDate(vagaData.dataDivulgacao),
+          data_inicio_selecao: parseDate(vagaData.dataInicioSelecao),
+          data_envio_curriculos: parseDate(vagaData.dataEnvioCurriculos),
+          data_encerramento: parseDate(vagaData.dataEncerramento),
           perfil_word: vagaData.perfilWord,
           informacoes_complementares: vagaData.informacoesComplementares,
           questionario_tecnico: vagaData.questionarioTecnico,

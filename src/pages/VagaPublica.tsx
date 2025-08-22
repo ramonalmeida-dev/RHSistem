@@ -267,15 +267,19 @@ const VagaPublica: React.FC = () => {
       if (success) {
         // Salvar respostas do questionário se existir
         if (questionario && Object.keys(respostasQuestionario).length > 0) {
-          await supabase
-            .from('respostas_questionario')
-            .insert({
-              questionario_id: questionario.id,
-              candidato_id: candidato?.id,
-              vaga_id: vagaId,
-              respostas: respostasQuestionario,
-              completado: true
+          const { data: resultadoRespostas, error: erroRespostas } = await supabase
+            .rpc('salvar_respostas_questionario', {
+              p_questionario_id: questionario.id,
+              p_candidato_id: candidato?.id,
+              p_vaga_id: vagaId,
+              p_respostas: respostasQuestionario,
+              p_completado: true
             });
+
+          if (erroRespostas) {
+            console.error('Erro ao salvar respostas do questionário:', erroRespostas);
+            // Não falhar a candidatura por erro no questionário
+          }
         }
 
         // Atualizar estados

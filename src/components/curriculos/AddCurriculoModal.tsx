@@ -62,35 +62,7 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
     try {
       console.log('Iniciando salvamento do currículo no banco:', { formData });
       
-      // Primeiro, inserir o candidato
-      const { data: candidatoData, error: candidatoError } = await supabase
-        .from('candidatos')
-        .insert({
-          nome: formData.nome,
-          email: formData.email,
-          telefone: formData.telefone
-        })
-        .select()
-        .single();
-
-      if (candidatoError) {
-        console.error('Erro ao inserir candidato:', candidatoError);
-        throw candidatoError;
-      }
-
-      if (candidatoData) {
-        setCandidato({
-          id: candidatoData.id,
-          nome: candidatoData.nome || 'Candidato',
-          email: candidatoData.email || '',
-          telefone: candidatoData.telefone || '',
-          deleted_at: candidatoData.deleted_at,
-          created_at: candidatoData.created_at,
-          updated_at: candidatoData.updated_at
-        });
-      }
-
-      // Se há um currículo, fazer upload
+      // Se há um currículo, fazer upload primeiro
       let url_storage = "";
       if (curriculoFile) {
         const fileName = `${Date.now()}_${curriculoFile.name}`;
@@ -108,34 +80,37 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
         url_storage = filePath;
       }
 
-      // Inserir no banco de currículos
-      const { error: bancoError } = await supabase
-        .from('banco_curriculos')
-        .insert({
-          candidato_id: candidatoData.id,
-          nome_arquivo: curriculoFile?.name || 'sem_arquivo',
-          url_storage: url_storage || null,
-          tamanho_bytes: curriculoFile?.size || 0,
-          tipo_arquivo: curriculoFile?.type || null,
-          area_atuacao: formData.area_atuacao,
-          experiencia_anos: formData.experiencia_anos,
-          formacao: formData.formacao,
-          localizacao: formData.localizacao,
-          disponibilidade: formData.disponibilidade,
-          avaliacao: formData.avaliacao,
-          observacoes: formData.observacoes || null,
-          linkedin_url: formData.linkedin_url || null,
-          portfolio_url: formData.portfolio_url || null,
-          status: 'ativo',
-          favorito: false
+      // Usar função RPC para adicionar currículo
+      const { data: resultado, error: rpcError } = await supabase
+        .rpc('adicionar_curriculo_manual', {
+          p_nome: formData.nome,
+          p_email: formData.email,
+          p_telefone: formData.telefone,
+          p_area_atuacao: formData.area_atuacao || null,
+          p_experiencia_anos: formData.experiencia_anos,
+          p_formacao: formData.formacao || null,
+          p_localizacao: formData.localizacao || null,
+          p_disponibilidade: formData.disponibilidade,
+          p_avaliacao: formData.avaliacao,
+          p_observacoes: formData.observacoes || null,
+          p_linkedin_url: formData.linkedin_url || null,
+          p_portfolio_url: formData.portfolio_url || null,
+          p_nome_arquivo: curriculoFile?.name || null,
+          p_url_storage: url_storage || null,
+          p_tamanho_bytes: curriculoFile?.size || 0,
+          p_tipo_arquivo: curriculoFile?.type || null
         });
 
-      if (bancoError) {
-        console.error('Erro ao inserir no banco de currículos:', bancoError);
-        throw bancoError;
+      if (rpcError) {
+        console.error('Erro na função RPC:', rpcError);
+        throw rpcError;
       }
 
-      console.log('Currículo salvo no banco com sucesso');
+      if (!resultado || !resultado.success) {
+        throw new Error(resultado?.error || 'Erro desconhecido');
+      }
+
+      console.log('Currículo salvo no banco com sucesso:', resultado);
 
       toast({
         title: "Currículo adicionado",
@@ -165,7 +140,7 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
       console.error('Erro ao adicionar currículo:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível adicionar o currículo",
+        description: error instanceof Error ? error.message : "Não foi possível adicionar o currículo",
         variant: "destructive",
       });
     } finally {

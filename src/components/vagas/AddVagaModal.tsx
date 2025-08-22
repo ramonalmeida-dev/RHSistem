@@ -157,26 +157,6 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
       newErrors.dataRecebimento = "Data de recebimento é obrigatória";
     }
 
-    if (!formData.dataFormatacaoPerfil) {
-      newErrors.dataFormatacaoPerfil = "Data de formatação do perfil é obrigatória";
-    }
-
-    if (!formData.dataDivulgacao) {
-      newErrors.dataDivulgacao = "Data de divulgação é obrigatória";
-    }
-
-    if (!formData.dataInicioSelecao) {
-      newErrors.dataInicioSelecao = "Data de início da seleção é obrigatória";
-    }
-
-    if (!formData.dataEnvioCurriculos) {
-      newErrors.dataEnvioCurriculos = "Data de envio dos currículos é obrigatória";
-    }
-
-    if (!formData.dataEncerramento) {
-      newErrors.dataEncerramento = "Data de encerramento é obrigatória";
-    }
-
     if (!formData.consultorId || formData.consultorId === "") {
       newErrors.consultorId = "Consultor é obrigatório" as any;
     }
@@ -378,86 +358,66 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
               <div className="space-y-2">
                 <Label htmlFor="dataFormatacaoPerfil" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Data de Formatação do Perfil *
+                  Data de Formatação do Perfil
                 </Label>
                 <Input
                   id="dataFormatacaoPerfil"
                   type="date"
                   value={formData.dataFormatacaoPerfil}
                   onChange={(e) => handleInputChange("dataFormatacaoPerfil", e.target.value)}
-                  className={errors.dataFormatacaoPerfil ? "border-destructive" : ""}
                 />
-                {errors.dataFormatacaoPerfil && (
-                  <p className="text-sm text-destructive">{errors.dataFormatacaoPerfil}</p>
-                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="dataDivulgacao" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Data de Divulgação *
+                  Data de Divulgação
                 </Label>
                 <Input
                   id="dataDivulgacao"
                   type="date"
                   value={formData.dataDivulgacao}
                   onChange={(e) => handleInputChange("dataDivulgacao", e.target.value)}
-                  className={errors.dataDivulgacao ? "border-destructive" : ""}
                 />
-                {errors.dataDivulgacao && (
-                  <p className="text-sm text-destructive">{errors.dataDivulgacao}</p>
-                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="dataInicioSelecao" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Data de Início da Seleção *
+                  Data de Início da Seleção
                 </Label>
                 <Input
                   id="dataInicioSelecao"
                   type="date"
                   value={formData.dataInicioSelecao}
                   onChange={(e) => handleInputChange("dataInicioSelecao", e.target.value)}
-                  className={errors.dataInicioSelecao ? "border-destructive" : ""}
                 />
-                {errors.dataInicioSelecao && (
-                  <p className="text-sm text-destructive">{errors.dataInicioSelecao}</p>
-                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="dataEnvioCurriculos" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Data de Envio dos CVs *
+                  Data de Envio dos CVs
                 </Label>
                 <Input
                   id="dataEnvioCurriculos"
                   type="date"
                   value={formData.dataEnvioCurriculos}
                   onChange={(e) => handleInputChange("dataEnvioCurriculos", e.target.value)}
-                  className={errors.dataEnvioCurriculos ? "border-destructive" : ""}
                 />
-                {errors.dataEnvioCurriculos && (
-                  <p className="text-sm text-destructive">{errors.dataEnvioCurriculos}</p>
-                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="dataEncerramento" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Data de Encerramento *
+                  Data de Encerramento
                 </Label>
                 <Input
                   id="dataEncerramento"
                   type="date"
                   value={formData.dataEncerramento}
                   onChange={(e) => handleInputChange("dataEncerramento", e.target.value)}
-                  className={errors.dataEncerramento ? "border-destructive" : ""}
                 />
-                {errors.dataEncerramento && (
-                  <p className="text-sm text-destructive">{errors.dataEncerramento}</p>
-                )}
               </div>
             </div>
           </div>
