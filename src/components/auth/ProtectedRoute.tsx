@@ -9,11 +9,11 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, usuario, loading } = useAuth();
   const location = useLocation();
 
-  // Loading simples - sem timeouts complexos
-  if (isLoading) {
+  // Loading - aguardando verificação de autenticação
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
@@ -25,12 +25,24 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   }
 
   // Se não está autenticado, redirecionar para login
-  if (!isAuthenticated) {
+  if (!user || !usuario) {
     return <Navigate to="/login" state={{ returnUrl: location.pathname }} replace />;
   }
 
-  // Se requer admin mas o usuário não é admin
-  if (requireAdmin && user?.tipo !== 'admin') {
+  // Verificar se o usuário está ativo
+  if (!usuario.ativo) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Acesso Negado</h2>
+          <p className="text-muted-foreground">Sua conta está desativada. Entre em contato com o administrador.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Se requer admin mas o usuário não tem nível suficiente (compatibilidade)
+  if (requireAdmin && usuario.nivel_acesso < 4) {
     return <Navigate to="/" replace />;
   }
 

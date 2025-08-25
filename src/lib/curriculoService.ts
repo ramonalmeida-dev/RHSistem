@@ -133,6 +133,47 @@ export async function saveCurriculoReference(
 }
 
 /**
+ * Salva referência do currículo no banco de currículos (sem vaga)
+ */
+export async function saveCurriculoReferenceBanco(
+  candidatoId: string,
+  curriculoId: string,
+  fileName: string,
+  filePath: string,
+  fileSize: number,
+  fileType: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('banco_curriculos')
+      .update({
+        nome_arquivo: fileName,
+        url_storage: filePath,
+        tamanho_bytes: fileSize,
+        tipo_arquivo: fileType
+      })
+      .eq('id', curriculoId);
+
+    if (error) {
+      console.error('Erro ao atualizar referência no banco:', error);
+      return {
+        success: false,
+        error: 'Erro ao atualizar referência do currículo.'
+      };
+    }
+
+    return { success: true };
+
+  } catch (error) {
+    console.error('Erro ao atualizar referência do currículo:', error);
+    return {
+      success: false,
+      error: 'Erro interno ao atualizar referência.'
+    };
+  }
+}
+
+/**
  * Obtém todos os currículos de um candidato
  */
 export async function getCurriculosByCandidato(

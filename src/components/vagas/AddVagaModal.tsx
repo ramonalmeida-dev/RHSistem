@@ -91,6 +91,35 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [errors, setErrors] = useState<Partial<VagaData>>({});
 
+  // Função para formatar valor monetário
+  const formatarMoeda = (valor: string): string => {
+    // Remove tudo que não é número
+    const numeros = valor.replace(/\D/g, '');
+    
+    if (numeros === '') return '';
+    
+    // Converte para número e formata
+    const numero = parseInt(numeros);
+    return numero.toLocaleString('pt-BR');
+  };
+
+  // Função para limpar formatação monetária
+  const limparFormatacaoMoeda = (valor: string): string => {
+    return valor.replace(/\D/g, '');
+  };
+
+  // Função para calcular data mínima baseada na data de recebimento
+  const getDataMinima = (dataRecebimento: string): string => {
+    if (!dataRecebimento) return '';
+    return dataRecebimento;
+  };
+
+  // Função para validar se uma data é posterior à data de recebimento
+  const validarDataPosterior = (data: string, dataRecebimento: string): boolean => {
+    if (!data || !dataRecebimento) return true;
+    return new Date(data) >= new Date(dataRecebimento);
+  };
+
   // Carregar clientes e usuários
   useEffect(() => {
     const loadData = async () => {
@@ -304,9 +333,12 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                 </Label>
                 <Input
                   id="salario"
-                  placeholder="Ex: R$ 5.000 - R$ 8.000"
+                  placeholder="Ex: 10.000"
                   value={formData.salario}
-                  onChange={(e) => handleInputChange("salario", e.target.value)}
+                  onChange={(e) => {
+                    const valorFormatado = formatarMoeda(e.target.value);
+                    handleInputChange("salario", valorFormatado);
+                  }}
                   className={errors.salario ? "border-destructive" : ""}
                 />
                 {errors.salario && (
@@ -363,9 +395,14 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                 <Input
                   id="dataFormatacaoPerfil"
                   type="date"
+                  min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataFormatacaoPerfil}
                   onChange={(e) => handleInputChange("dataFormatacaoPerfil", e.target.value)}
+                  className={formData.dataFormatacaoPerfil && !validarDataPosterior(formData.dataFormatacaoPerfil, formData.dataRecebimento) ? "border-destructive" : ""}
                 />
+                {formData.dataFormatacaoPerfil && !validarDataPosterior(formData.dataFormatacaoPerfil, formData.dataRecebimento) && (
+                  <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -376,9 +413,14 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                 <Input
                   id="dataDivulgacao"
                   type="date"
+                  min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataDivulgacao}
                   onChange={(e) => handleInputChange("dataDivulgacao", e.target.value)}
+                  className={formData.dataDivulgacao && !validarDataPosterior(formData.dataDivulgacao, formData.dataRecebimento) ? "border-destructive" : ""}
                 />
+                {formData.dataDivulgacao && !validarDataPosterior(formData.dataDivulgacao, formData.dataRecebimento) && (
+                  <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -389,9 +431,14 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                 <Input
                   id="dataInicioSelecao"
                   type="date"
+                  min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataInicioSelecao}
                   onChange={(e) => handleInputChange("dataInicioSelecao", e.target.value)}
+                  className={formData.dataInicioSelecao && !validarDataPosterior(formData.dataInicioSelecao, formData.dataRecebimento) ? "border-destructive" : ""}
                 />
+                {formData.dataInicioSelecao && !validarDataPosterior(formData.dataInicioSelecao, formData.dataRecebimento) && (
+                  <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -402,9 +449,14 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                 <Input
                   id="dataEnvioCurriculos"
                   type="date"
+                  min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataEnvioCurriculos}
                   onChange={(e) => handleInputChange("dataEnvioCurriculos", e.target.value)}
+                  className={formData.dataEnvioCurriculos && !validarDataPosterior(formData.dataEnvioCurriculos, formData.dataRecebimento) ? "border-destructive" : ""}
                 />
+                {formData.dataEnvioCurriculos && !validarDataPosterior(formData.dataEnvioCurriculos, formData.dataRecebimento) && (
+                  <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -415,9 +467,14 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                 <Input
                   id="dataEncerramento"
                   type="date"
+                  min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataEncerramento}
                   onChange={(e) => handleInputChange("dataEncerramento", e.target.value)}
+                  className={formData.dataEncerramento && !validarDataPosterior(formData.dataEncerramento, formData.dataRecebimento) ? "border-destructive" : ""}
                 />
+                {formData.dataEncerramento && !validarDataPosterior(formData.dataEncerramento, formData.dataRecebimento) && (
+                  <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
+                )}
               </div>
             </div>
           </div>

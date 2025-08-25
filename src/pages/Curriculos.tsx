@@ -47,6 +47,7 @@ import { supabase } from "@/lib/supabase";
 import { CurriculoDetailsModal } from "@/components/curriculos/CurriculoDetailsModal";
 import { SendToVagaModal } from "@/components/curriculos/SendToVagaModal";
 import { AddCurriculoModal } from "@/components/curriculos/AddCurriculoModal";
+import { EditCandidatoModal } from "@/components/candidatos/EditCandidatoModal";
 import { useToast } from "@/hooks/use-toast";
 
 // Tipos para o banco de currículos
@@ -125,14 +126,13 @@ const Curriculos = () => {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedArea, setSelectedArea] = useState("todas");
-  const [selectedDisponibilidade, setSelectedDisponibilidade] = useState("todas");
-  const [selectedStatus, setSelectedStatus] = useState("todas");
   const [selectedCurriculo, setSelectedCurriculo] = useState<BancoCurriculoWithCandidato | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [sendToVagaModalOpen, setSendToVagaModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [curriculoToDelete, setCurriculoToDelete] = useState<BancoCurriculoWithCandidato | null>(null);
+  const [editCandidatoModalOpen, setEditCandidatoModalOpen] = useState(false);
+  const [candidatoToEdit, setCandidatoToEdit] = useState<BancoCurriculoWithCandidato | null>(null);
   const [addCurriculoModalOpen, setAddCurriculoModalOpen] = useState(false);
   const { toast } = useToast();
   
@@ -148,24 +148,30 @@ const Curriculos = () => {
       setLoading(true);
       
       if (searchTerm.trim()) {
-        // Busca com termo de pesquisa
+        // Limpar termo de busca (remover máscaras)
+        const cleanSearchTerm = searchTerm.replace(/\D/g, '');
+        
+        // Busca usando função RPC para buscar em campos relacionados
         const { data, error, count } = await supabase
-          .from('banco_curriculos')
-          .select(`
-            *,
-            candidato:candidatos(id, nome, email, telefone)
-          `, { count: 'exact' })
-          .ilike('nome_arquivo', `%${searchTerm}%`)
-          .or(`area_atuacao.ilike.%${searchTerm}%,formacao.ilike.%${searchTerm}%,localizacao.ilike.%${searchTerm}%`)
-          .order('created_at', { ascending: false })
-          .range(offset, offset + itemsPerPage - 1);
+          .rpc('buscar_curriculos_por_candidato', {
+            termo_busca: searchTerm,
+            termo_limpo: cleanSearchTerm,
+            offset_val: offset,
+            limit_val: itemsPerPage
+          });
 
         if (error) throw error;
         
-        setCurriculos(data || []);
+        // Converter a resposta da RPC para o formato esperado
+        const formattedData = (data || []).map((item: any) => ({
+          ...item,
+          candidato: item.candidato // O candidato já vem como objeto JSON
+        }));
+        
+        setCurriculos(formattedData);
         setTotalItems(count || 0);
       } else {
-        // Carregar todos os dados para busca no frontend
+        // Carregar todos os dados
         const { data, error, count } = await supabase
           .from('banco_curriculos')
           .select(`
@@ -261,12 +267,12 @@ const Curriculos = () => {
   // Debounce para busca
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      setCurrentPage(1); // Reset para primeira página quando filtros mudarem
-      loadCurriculos();
+      setCurrentPage(1); // Reset para primeira página quando busca mudar
+      loadCurriculos(searchTerm, (currentPage - 1) * itemsPerPage);
     }, 500); // Aumentado para 500ms para ser mais estável
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, selectedArea, selectedDisponibilidade, selectedStatus, currentPage]);
+  }, [searchTerm, currentPage]);
 
   // Carregar estatísticas apenas uma vez
   useEffect(() => {
@@ -346,6 +352,12 @@ const Curriculos = () => {
   const handleViewDetails = (curriculo: BancoCurriculoWithCandidato) => {
     setSelectedCurriculo(curriculo);
     setDetailsModalOpen(true);
+  };
+
+  // Editar candidato
+  const handleEditCandidato = (curriculo: BancoCurriculoWithCandidato) => {
+    setCandidatoToEdit(curriculo);
+    setEditCandidatoModalOpen(true);
   };
 
   // Enviar para vaga
@@ -467,53 +479,19 @@ const Curriculos = () => {
           </Card>
         </div>
 
-        {/* Filters */}
+        {/* Search */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por nome, área, formação..."
+                  placeholder="Buscar por nome, email ou telefone..."
                   className="pl-10"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Select value={selectedArea} onValueChange={setSelectedArea}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Área" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas as Áreas</SelectItem>
-                  <SelectItem value="desenvolvimento">Desenvolvimento</SelectItem>
-                  <SelectItem value="marketing">Marketing</SelectItem>
-                  <SelectItem value="vendas">Vendas</SelectItem>
-                  <SelectItem value="design">Design</SelectItem>
-                  <SelectItem value="rh">Recursos Humanos</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={selectedDisponibilidade} onValueChange={setSelectedDisponibilidade}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Disponibilidade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas</SelectItem>
-                  <SelectItem value="disponivel">Disponível</SelectItem>
-                  <SelectItem value="empregado">Empregado</SelectItem>
-                  <SelectItem value="indisponivel">Indisponível</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todos</SelectItem>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </CardContent>
         </Card>
@@ -524,21 +502,18 @@ const Curriculos = () => {
             <CardContent className="pt-6">
               <p className="text-destructive text-center mb-4">{error}</p>
               <div className="flex justify-center gap-2">
-                <Button onClick={loadCurriculos} variant="outline">
+                <Button onClick={() => loadCurriculos()} variant="outline">
                   Tentar Novamente
                 </Button>
                 <Button 
                   onClick={() => {
                     setError(null);
                     setSearchTerm("");
-                    setSelectedArea("todas");
-                    setSelectedDisponibilidade("todas");
-                    setSelectedStatus("todas");
                     setCurrentPage(1);
                   }} 
                   variant="outline"
                 >
-                  Limpar Filtros
+                  Limpar Busca
                 </Button>
               </div>
             </CardContent>
@@ -562,12 +537,12 @@ const Curriculos = () => {
                 <User className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Nenhum currículo encontrado</h3>
                 <p className="text-muted-foreground text-center mb-4">
-                  {searchTerm || selectedArea !== "todas" || selectedDisponibilidade !== "todas"
+                  {searchTerm
                     ? "Nenhum currículo corresponde aos critérios de busca."
                     : "Comece adicionando seu primeiro currículo."
                   }
                 </p>
-                {!searchTerm && selectedArea === "todas" && selectedDisponibilidade === "todas" && (
+                {!searchTerm && (
                   <Button onClick={() => setAddCurriculoModalOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Adicionar CV
@@ -656,6 +631,10 @@ const Curriculos = () => {
                                 <DropdownMenuItem onClick={() => handleViewDetails(curriculo)}>
                                   <Eye className="mr-2 h-4 w-4" />
                                   Ver Detalhes
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditCandidato(curriculo)}>
+                                  <User className="mr-2 h-4 w-4" />
+                                  Editar Candidato
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDownload(curriculo)}>
                                   <Download className="mr-2 h-4 w-4" />
@@ -784,6 +763,24 @@ const Curriculos = () => {
             });
           }}
         />
+
+        {/* Modal de Editar Candidato */}
+        {candidatoToEdit && (
+          <EditCandidatoModal
+            isOpen={editCandidatoModalOpen}
+            onClose={() => {
+              setEditCandidatoModalOpen(false);
+              setCandidatoToEdit(null);
+            }}
+            onSuccess={() => {
+              // Recarregar dados após editar
+              loadCurriculos();
+              loadStats();
+            }}
+            candidato={candidatoToEdit.candidato}
+            curriculo={candidatoToEdit}
+          />
+        )}
       </div>
     </MainLayout>
   );

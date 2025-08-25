@@ -60,8 +60,6 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
     setLoading(true);
 
     try {
-      console.log('Iniciando salvamento do currículo no banco:', { formData });
-      
       // Se há um currículo, fazer upload primeiro
       let url_storage = "";
       if (curriculoFile) {
@@ -109,8 +107,6 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
       if (!resultado || !resultado.success) {
         throw new Error(resultado?.error || 'Erro desconhecido');
       }
-
-      console.log('Currículo salvo no banco com sucesso:', resultado);
 
       toast({
         title: "Currículo adicionado",

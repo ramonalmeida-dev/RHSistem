@@ -43,9 +43,6 @@ interface EditVagaModalProps {
 interface VagaData {
   numeroVaga: string;
   empresaId: string;
-  contatoEnvioCv: string;
-  email: string;
-  celular: string;
   cargo: string;
   salario: string;
   localTrabalho: string;
@@ -112,9 +109,6 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
   const [formData, setFormData] = useState<VagaData>({
     numeroVaga: "",
     empresaId: "",
-    contatoEnvioCv: "",
-    email: "",
-    celular: "",
     cargo: "",
     salario: "",
     localTrabalho: "",
@@ -134,6 +128,35 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [errors, setErrors] = useState<Partial<VagaData>>({});
+
+  // Função para formatar valor monetário
+  const formatarMoeda = (valor: string): string => {
+    // Remove tudo que não é número
+    const numeros = valor.replace(/\D/g, '');
+    
+    if (numeros === '') return '';
+    
+    // Converte para número e formata
+    const numero = parseInt(numeros);
+    return numero.toLocaleString('pt-BR');
+  };
+
+  // Função para limpar formatação monetária
+  const limparFormatacaoMoeda = (valor: string): string => {
+    return valor.replace(/\D/g, '');
+  };
+
+  // Função para calcular data mínima baseada na data de recebimento
+  const getDataMinima = (dataRecebimento: string): string => {
+    if (!dataRecebimento) return '';
+    return dataRecebimento;
+  };
+
+  // Função para validar se uma data é posterior à data de recebimento
+  const validarDataPosterior = (data: string, dataRecebimento: string): boolean => {
+    if (!data || !dataRecebimento) return true;
+    return new Date(data) >= new Date(dataRecebimento);
+  };
 
   // Carregar dados quando o modal abrir
   useEffect(() => {
@@ -184,11 +207,8 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
         setFormData({
           numeroVaga: vaga.numero_vaga,
           empresaId: vaga.empresa_id,
-          contatoEnvioCv: vaga.contato_envio_cv,
-          email: vaga.email,
-          celular: vaga.celular,
           cargo: vaga.cargo,
-          salario: vaga.salario,
+          salario: formatarMoeda(vaga.salario),
           localTrabalho: vaga.local_trabalho,
           dataRecebimento: vaga.data_recebimento,
           dataFormatacaoPerfil: vaga.data_formatacao_perfil,
@@ -209,7 +229,6 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
   }, [vaga]);
 
   const handleInputChange = (field: keyof VagaData, value: string | number | PerguntaQuestionario[]) => {
-    console.log(`Mudança no campo ${field}:`, value);
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -226,20 +245,6 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
 
     if (!formData.empresaId || formData.empresaId === "") {
       newErrors.empresaId = "Empresa é obrigatória" as any;
-    }
-
-    if (!formData.contatoEnvioCv.trim()) {
-      newErrors.contatoEnvioCv = "Contato é obrigatório";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "E-mail é obrigatório";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "E-mail deve ser válido";
-    }
-
-    if (!formData.celular.trim()) {
-      newErrors.celular = "Celular é obrigatório";
     }
 
     if (!formData.cargo.trim()) {
@@ -324,10 +329,7 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
     onClose();
   };
 
-  const formatCelular = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    return numbers.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
-  };
+
 
   if (!vaga) return null;
 
@@ -393,63 +395,7 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="contatoEnvioCv" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Contato *
-                </Label>
-                <Input
-                  id="contatoEnvioCv"
-                  placeholder="Nome do contato"
-                  value={formData.contatoEnvioCv}
-                  onChange={(e) => handleInputChange("contatoEnvioCv", e.target.value)}
-                  className={errors.contatoEnvioCv ? "border-destructive" : ""}
-                />
-                {errors.contatoEnvioCv && (
-                  <p className="text-sm text-destructive">{errors.contatoEnvioCv}</p>
-                )}
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  E-mail *
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="contato@empresa.com.br"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  className={errors.email ? "border-destructive" : ""}
-                />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="celular" className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  Celular *
-                </Label>
-                <Input
-                  id="celular"
-                  placeholder="(XX) XXXXX-XXXX"
-                  value={formData.celular}
-                  onChange={(e) => {
-                    const formatted = formatCelular(e.target.value);
-                    handleInputChange("celular", formatted);
-                  }}
-                  maxLength={15}
-                  className={errors.celular ? "border-destructive" : ""}
-                />
-                {errors.celular && (
-                  <p className="text-sm text-destructive">{errors.celular}</p>
-                )}
-              </div>
-            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -476,9 +422,12 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                 </Label>
                 <Input
                   id="salario"
-                  placeholder="Ex: R$ 5.000 - R$ 8.000"
+                  placeholder="Ex: 10.000"
                   value={formData.salario}
-                  onChange={(e) => handleInputChange("salario", e.target.value)}
+                  onChange={(e) => {
+                    const valorFormatado = formatarMoeda(e.target.value);
+                    handleInputChange("salario", valorFormatado);
+                  }}
                   className={errors.salario ? "border-destructive" : ""}
                 />
                 {errors.salario && (
@@ -535,12 +484,16 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                 <Input
                   id="dataFormatacaoPerfil"
                   type="date"
+                  min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataFormatacaoPerfil}
                   onChange={(e) => handleInputChange("dataFormatacaoPerfil", e.target.value)}
-                  className={errors.dataFormatacaoPerfil ? "border-destructive" : ""}
+                  className={errors.dataFormatacaoPerfil || (formData.dataFormatacaoPerfil && !validarDataPosterior(formData.dataFormatacaoPerfil, formData.dataRecebimento)) ? "border-destructive" : ""}
                 />
                 {errors.dataFormatacaoPerfil && (
                   <p className="text-sm text-destructive">{errors.dataFormatacaoPerfil}</p>
+                )}
+                {formData.dataFormatacaoPerfil && !validarDataPosterior(formData.dataFormatacaoPerfil, formData.dataRecebimento) && (
+                  <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
                 )}
               </div>
 
@@ -552,12 +505,16 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                 <Input
                   id="dataDivulgacao"
                   type="date"
+                  min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataDivulgacao}
                   onChange={(e) => handleInputChange("dataDivulgacao", e.target.value)}
-                  className={errors.dataDivulgacao ? "border-destructive" : ""}
+                  className={errors.dataDivulgacao || (formData.dataDivulgacao && !validarDataPosterior(formData.dataDivulgacao, formData.dataRecebimento)) ? "border-destructive" : ""}
                 />
                 {errors.dataDivulgacao && (
                   <p className="text-sm text-destructive">{errors.dataDivulgacao}</p>
+                )}
+                {formData.dataDivulgacao && !validarDataPosterior(formData.dataDivulgacao, formData.dataRecebimento) && (
+                  <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
                 )}
               </div>
 
@@ -569,12 +526,16 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                 <Input
                   id="dataInicioSelecao"
                   type="date"
+                  min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataInicioSelecao}
                   onChange={(e) => handleInputChange("dataInicioSelecao", e.target.value)}
-                  className={errors.dataInicioSelecao ? "border-destructive" : ""}
+                  className={errors.dataInicioSelecao || (formData.dataInicioSelecao && !validarDataPosterior(formData.dataInicioSelecao, formData.dataRecebimento)) ? "border-destructive" : ""}
                 />
                 {errors.dataInicioSelecao && (
                   <p className="text-sm text-destructive">{errors.dataInicioSelecao}</p>
+                )}
+                {formData.dataInicioSelecao && !validarDataPosterior(formData.dataInicioSelecao, formData.dataRecebimento) && (
+                  <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
                 )}
               </div>
 
@@ -586,12 +547,16 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                 <Input
                   id="dataEnvioCurriculos"
                   type="date"
+                  min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataEnvioCurriculos}
                   onChange={(e) => handleInputChange("dataEnvioCurriculos", e.target.value)}
-                  className={errors.dataEnvioCurriculos ? "border-destructive" : ""}
+                  className={errors.dataEnvioCurriculos || (formData.dataEnvioCurriculos && !validarDataPosterior(formData.dataEnvioCurriculos, formData.dataRecebimento)) ? "border-destructive" : ""}
                 />
                 {errors.dataEnvioCurriculos && (
                   <p className="text-sm text-destructive">{errors.dataEnvioCurriculos}</p>
+                )}
+                {formData.dataEnvioCurriculos && !validarDataPosterior(formData.dataEnvioCurriculos, formData.dataRecebimento) && (
+                  <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
                 )}
               </div>
 
@@ -603,12 +568,16 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                 <Input
                   id="dataEncerramento"
                   type="date"
+                  min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataEncerramento}
                   onChange={(e) => handleInputChange("dataEncerramento", e.target.value)}
-                  className={errors.dataEncerramento ? "border-destructive" : ""}
+                  className={errors.dataEncerramento || (formData.dataEncerramento && !validarDataPosterior(formData.dataEncerramento, formData.dataRecebimento)) ? "border-destructive" : ""}
                 />
                 {errors.dataEncerramento && (
                   <p className="text-sm text-destructive">{errors.dataEncerramento}</p>
+                )}
+                {formData.dataEncerramento && !validarDataPosterior(formData.dataEncerramento, formData.dataRecebimento) && (
+                  <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
                 )}
               </div>
             </div>
@@ -678,8 +647,6 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                 <Select
                   value={formData.consultorId}
                   onValueChange={(value) => {
-                    console.log('Edit Select consultorId value:', value);
-                    console.log('Edit Current formData.consultorId:', formData.consultorId);
                     handleInputChange("consultorId", value);
                   }}
                 >

@@ -75,22 +75,11 @@ Deno.serve(async (req) => {
       }
 
       if (search) {
-        // Usar função RPC para busca inteligente
-        const { data: clientes, error } = await supabase
-          .rpc('buscar_clientes', {
-            termo_busca: search,
-            ativo_filter: ativo !== null ? (ativo === 'true') : null
-          });
+        // Remover máscaras do termo de busca
+        const searchClean = search.replace(/[^\w\s]/g, '');
         
-        if (error) {
-          throw error;
-        }
-        
-        if (id) {
-          return createSuccessResponse(clientes[0] || null);
-        }
-        
-        return createSuccessResponse(clientes);
+        // Busca abrangente em múltiplos campos
+        query = query.or(`razao_social.ilike.%${search}%,razao_social.ilike.%${searchClean}%,nome_fantasia.ilike.%${search}%,nome_fantasia.ilike.%${searchClean}%,cnpj.ilike.%${search}%,cnpj.ilike.%${searchClean}%,email.ilike.%${search}%,contato.ilike.%${search}%,contato.ilike.%${searchClean}%,celular.ilike.%${search}%,celular.ilike.%${searchClean}%,cidade.ilike.%${search}%,estado.ilike.%${search}%`);
       }
 
       if (ativo !== null) {
@@ -233,7 +222,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      const updateData: any = {};
+      const updateData = {};
       if (razao_social !== undefined) updateData.razao_social = razao_social;
       if (nome_fantasia !== undefined) updateData.nome_fantasia = nome_fantasia;
       if (cnpj !== undefined) updateData.cnpj = cnpj;

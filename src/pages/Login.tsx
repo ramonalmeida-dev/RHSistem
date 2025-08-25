@@ -6,9 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Eye, EyeOff } from "lucide-react";
-import { login, supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -18,8 +17,7 @@ export default function Login() {
   const [error, setError] = useState("");
   
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { logout } = useAuth();
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,29 +25,13 @@ export default function Login() {
     setError("");
 
     try {
-      const result = await login(email, password);
-      
-      if (result.error) {
-        setError(result.error.message);
-        toast({
-          title: "Erro no login",
-          description: result.error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Login realizado com sucesso",
-          description: "Redirecionando...",
-        });
-        navigate("/");
-      }
-    } catch (err) {
-      setError("Erro interno do servidor");
-      toast({
-        title: "Erro no login",
-        description: "Erro interno do servidor",
-        variant: "destructive",
-      });
+      await signIn(email, password);
+      toast.success("Login realizado com sucesso!");
+      navigate("/");
+    } catch (err: any) {
+      const errorMessage = err.message || "Erro interno do servidor";
+      setError(errorMessage);
+      toast.error(`Erro no login: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }

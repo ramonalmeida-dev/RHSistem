@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AddClienteModal } from "@/components/clientes/AddClienteModal";
 import { EditClienteModal } from "@/components/clientes/EditClienteModal";
-import { supabase } from "@/lib/supabase";
+import { ClientesService } from "@/lib/clientesService";
 import { useToast } from "@/hooks/use-toast";
 
 // Interface baseada no backend
@@ -53,8 +53,11 @@ interface Cliente {
 
 const Clientes = () => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
@@ -63,20 +66,15 @@ const Clientes = () => {
   const { toast } = useToast();
 
   // Carregar clientes
-  const loadClientes = async () => {
+  const loadClientes = async (search?: string, showLoading: boolean = true) => {
     try {
-      setIsLoading(true);
-      
-      const { data, error } = await supabase
-        .from('clientes')
-        .select('*')
-        .order('razao_social');
-
-      if (error) {
-        throw error;
+      if (showLoading) {
+        setIsLoading(true);
       }
-
+      
+      const data = await ClientesService.listarClientes(search);
       setClientes(data || []);
+      setFilteredClientes(data || []); // Inicializar filtrados com todos os clientes
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
       toast({
@@ -85,7 +83,9 @@ const Clientes = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -116,15 +116,7 @@ const Clientes = () => {
         ativo: true
       };
 
-      const { data, error } = await supabase
-        .from('clientes')
-        .insert(mappedData)
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
+      await ClientesService.criarCliente(mappedData);
 
       toast({
         title: "Sucesso",
@@ -133,6 +125,7 @@ const Clientes = () => {
 
       setIsAddModalOpen(false);
       loadClientes();
+      setFilteredClientes([]); // Resetar filtrados para recarregar
     } catch (error) {
       console.error('Erro ao criar cliente:', error);
       toast({
@@ -173,28 +166,16 @@ const Clientes = () => {
         ativo: selectedCliente.ativo
       };
 
-      const { data, error } = await supabase
-        .from('clientes')
-        .update(mappedData)
-        .eq('id', selectedCliente.id)
-        .select()
-        .single();
+      await ClientesService.atualizarCliente(mappedData);
       
-      if (error) {
-        toast({
-          title: "Erro ao atualizar cliente",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Cliente atualizado com sucesso",
-          description: `${clienteData.razaoSocial} foi atualizado`,
-        });
-        setIsEditModalOpen(false);
-        setSelectedCliente(null);
-        loadClientes(); // Recarregar lista
-      }
+      toast({
+        title: "Cliente atualizado com sucesso",
+        description: `${clienteData.razaoSocial} foi atualizado`,
+      });
+      setIsEditModalOpen(false);
+      setSelectedCliente(null);
+      loadClientes(); // Recarregar lista
+      setFilteredClientes([]); // Resetar filtrados para recarregar
     } catch (error) {
       toast({
         title: "Erro ao atualizar cliente",
@@ -211,24 +192,14 @@ const Clientes = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('clientes')
-        .delete()
-        .eq('id', cliente.id);
+      await ClientesService.excluirCliente(cliente.id);
       
-      if (error) {
-        toast({
-          title: "Erro ao excluir cliente",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Cliente excluído com sucesso",
-          description: `${cliente.razao_social} foi removido da carteira`,
-        });
-        loadClientes(); // Recarregar lista
-      }
+      toast({
+        title: "Cliente excluído com sucesso",
+        description: `${cliente.razao_social} foi removido da carteira`,
+      });
+      loadClientes(); // Recarregar lista
+      setFilteredClientes([]); // Resetar filtrados para recarregar
     } catch (error) {
       toast({
         title: "Erro ao excluir cliente",
@@ -244,52 +215,46 @@ const Clientes = () => {
     setIsEditModalOpen(true);
   };
 
-  // Função para remover máscaras
-  const removeMasks = (text: string) => {
-    return text.replace(/[^\w\s]/g, '').toLowerCase();
-  };
+  // Buscar clientes com debounce (atualizando apenas a listagem)
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      if (searchTerm) {
+        setIsSearching(true);
+        try {
+          const data = await ClientesService.listarClientes(searchTerm);
+          setFilteredClientes(data || []); // Atualizar apenas os filtrados
+        } catch (error) {
+          console.error('Erro ao buscar clientes:', error);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        // Se não há termo de busca, mostrar todos os clientes
+        setFilteredClientes(clientes);
+      }
+    }, 500); // Aumentado para 500ms para dar mais tempo de digitar
 
-  // Filtrar clientes
-  const filteredClientes = clientes.filter(cliente => {
-    const searchTermClean = removeMasks(searchTerm);
-    
-    // Buscar na razão social
-    const razaoSocialClean = removeMasks(cliente.razao_social);
-    if (razaoSocialClean.includes(searchTermClean)) return true;
-    
-    // Buscar no nome fantasia
-    if (cliente.nome_fantasia) {
-      const nomeFantasiaClean = removeMasks(cliente.nome_fantasia);
-      if (nomeFantasiaClean.includes(searchTermClean)) return true;
-    }
-    
-    // Buscar no CNPJ (com e sem máscara)
-    const cnpjClean = removeMasks(cliente.cnpj);
-    if (cnpjClean.includes(searchTermClean)) return true;
-    
-    // Buscar no email
-    if (cliente.email && removeMasks(cliente.email).includes(searchTermClean)) return true;
-    
-    // Buscar no contato
-    if (cliente.contato && removeMasks(cliente.contato).includes(searchTermClean)) return true;
-    
-    // Buscar no celular
-    if (cliente.celular && removeMasks(cliente.celular).includes(searchTermClean)) return true;
-    
-    return false;
-  });
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, clientes]);
+
+  // Usar clientes filtrados do estado
 
   // Paginação
-  const totalPages = Math.ceil(filteredClientes.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedClientes = filteredClientes.slice(startIndex, endIndex);
+  const { totalPages, paginatedClientes, startIndex, endIndex } = useMemo(() => {
+    const totalPages = Math.ceil(filteredClientes.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedClientes = filteredClientes.slice(startIndex, endIndex);
+    
+    return { totalPages, paginatedClientes, startIndex, endIndex };
+  }, [filteredClientes, currentPage, itemsPerPage]);
 
   // Resetar página quando mudar a busca
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
 
+  // Carregar clientes iniciais
   useEffect(() => {
     loadClientes();
   }, []);
@@ -386,9 +351,14 @@ const Clientes = () => {
             <div className="flex gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  {isSearching ? (
+                    <Loader2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
+                  ) : (
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  )}
                   <Input
-                    placeholder="Buscar por razão social, nome fantasia, CNPJ, email, contato ou celular..."
+                    ref={searchInputRef}
+                    placeholder="Buscar por razão social, CNPJ, email ou telefone..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"

@@ -41,8 +41,10 @@ const VagaPublica: React.FC = () => {
   const { toast } = useToast();
   
   // Contextos
-  const { isAuthenticated: isAdmin } = useAuth();
+  const { user: adminUser } = useAuth();
   const { candidato, isAuthenticated, aplicarVaga, verificarCandidatura, loading, error } = useCandidatoExterno();
+  
+  const isAdmin = !!adminUser;
   
   const [vaga, setVaga] = useState<any>(null);
   const [questionario, setQuestionario] = useState<Questionario | null>(null);
@@ -558,7 +560,7 @@ const VagaPublica: React.FC = () => {
                       <div>
                         <CardTitle className="text-2xl font-bold mb-2">{vaga.cargo}</CardTitle>
                         <CardDescription className="text-blue-100 text-lg">
-                          {vaga.empresa?.razao_social}
+                          Vaga de Emprego
                         </CardDescription>
                       </div>
                       <Badge className="bg-green-500 hover:bg-green-600 text-white">
@@ -570,13 +572,6 @@ const VagaPublica: React.FC = () => {
                   <CardContent className="p-6 space-y-6">
                     {/* Informações básicas */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <Building2 className="h-5 w-5 text-blue-600" />
-                        <div>
-                          <p className="text-xs text-gray-500 uppercase tracking-wide">Empresa</p>
-                          <p className="font-medium">{vaga.empresa?.razao_social}</p>
-                        </div>
-                      </div>
                       <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                         <MapPin className="h-5 w-5 text-green-600" />
                         <div>
@@ -593,23 +588,6 @@ const VagaPublica: React.FC = () => {
                           </p>
                         </div>
                       </div>
-                      {vaga.salario && (
-                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                          <DollarSign className="h-5 w-5 text-emerald-600" />
-                          <div>
-                            <p className="text-xs text-gray-500 uppercase tracking-wide">Salário</p>
-                            <p className="font-medium">
-                              {(() => {
-                                const salarioNum = parseFloat(vaga.salario);
-                                if (isNaN(salarioNum)) {
-                                  return vaga.salario; // Retorna o valor original se não for número
-                                }
-                                return `R$ ${salarioNum.toLocaleString('pt-BR')}`;
-                              })()}
-                            </p>
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     <Separator />

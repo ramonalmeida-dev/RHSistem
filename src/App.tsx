@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Index from "./pages/Index";
 import Clientes from "./pages/Clientes";
 import Consultores from "./pages/Consultores";
+import GerenciarPermissoes from "./pages/GerenciarPermissoes";
 import Vagas from "./pages/Vagas";
 import Curriculos from "./pages/Curriculos";
 import PosicoesFechadas from "./pages/relatorios/PosicoesFechadas";
@@ -55,6 +56,12 @@ const App = () => (
               <Route path="/consultores" element={
                 <ProtectedRoute requireAdmin>
                   <Consultores />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/gerenciar-permissoes" element={
+                <ProtectedRoute requireAdmin>
+                  <GerenciarPermissoes />
                 </ProtectedRoute>
               } />
               

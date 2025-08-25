@@ -1,142 +1,213 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/lib/supabase";
+import { User } from "@supabase/supabase-js";
 
-export interface AuthUser {
+interface Usuario {
   id: string;
   email: string;
   nome: string;
-  tipo: 'admin' | 'consultor';
+  role_id: string;
+  role_nome: string;
+  role_descricao: string;
+  nivel_acesso: number;
   ativo: boolean;
 }
 
+interface Permissao {
+  permissao_nome: string;
+  modulo: string;
+  acao: string;
+}
+
 interface AuthContextType {
-  user: AuthUser | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => Promise<void>;
+  user: User | null;
+  usuario: Usuario | null;
+  permissoes: Permissao[];
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  temPermissao: (permissao: string) => boolean;
+  temRole: (role: string) => boolean;
+  temNivelAcesso: (nivel: number) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
-  }
-  return context;
-};
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [permissoes, setPermissoes] = useState<Permissao[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Inicialização simples e direta
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
+    // Verificar sessão atual
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Criar usuário básico a partir do JWT
+        const usuarioBasico: Usuario = {
+          id: session.user.id,
+          email: session.user.email || '',
+          nome: session.user.user_metadata?.nome || session.user.email?.split('@')[0] || 'Usuário',
+          role_id: '',
+          role_nome: 'admin_master', // Role padrão para acesso total
+          role_descricao: 'Administrador Master - Acesso total ao sistema',
+          nivel_acesso: 5,
+          ativo: true
+        };
         
-        if (session?.user && isAdminUser(session.user)) {
-          createUserFromAuth(session.user);
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error('Erro ao verificar sessão:', error);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
+        setUsuario(usuarioBasico);
+        
+        // Carregar dados completos em background (opcional)
+        carregarDadosCompletos(session.user.id);
       }
+      
+      setLoading(false);
     };
 
-    initializeAuth();
+    getSession();
 
-    // Listener simples para mudanças de auth
+    // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user && isAdminUser(session.user)) {
-          createUserFromAuth(session.user);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        } else if (event === 'TOKEN_REFRESHED' && session?.user && isAdminUser(session.user)) {
-          createUserFromAuth(session.user);
+      async (event, session) => {
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Criar usuário básico imediatamente
+          const usuarioBasico: Usuario = {
+            id: session.user.id,
+            email: session.user.email || '',
+            nome: session.user.user_metadata?.nome || session.user.email?.split('@')[0] || 'Usuário',
+            role_id: '',
+            role_nome: 'admin_master',
+            role_descricao: 'Administrador Master - Acesso total ao sistema',
+            nivel_acesso: 5,
+            ativo: true
+          };
+          
+          setUsuario(usuarioBasico);
+          
+          // Carregar dados completos em background
+          carregarDadosCompletos(session.user.id);
+        } else {
+          setUsuario(null);
+          setPermissoes([]);
         }
-        setIsLoading(false);
+        
+        setLoading(false);
       }
     );
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Verificar se é usuário administrativo
-  const isAdminUser = (authUser: User): boolean => {
-    return authUser.user_metadata?.tipo !== 'candidato_externo';
+  const carregarDadosCompletos = async (userId: string) => {
+    try {
+      // Buscar dados do usuário
+      const { data: usuarioData, error: usuarioError } = await supabase
+        .from('usuarios')
+        .select('id, email, nome, role_id, ativo')
+        .eq('id', userId)
+        .single();
+
+      if (usuarioError) {
+        return; // Manter usuário básico
+      }
+
+      if (usuarioData && usuarioData.role_id) {
+        // Buscar dados do role
+        const { data: roleData, error: roleError } = await supabase
+          .from('roles')
+          .select('nome, descricao, nivel_acesso')
+          .eq('id', usuarioData.role_id)
+          .single();
+
+        if (roleError) {
+          return; // Manter usuário básico
+        }
+
+        // Atualizar usuário com dados completos
+        const usuarioCompleto: Usuario = {
+          id: usuarioData.id,
+          email: usuarioData.email,
+          nome: usuarioData.nome,
+          role_id: usuarioData.role_id,
+          role_nome: roleData.nome,
+          role_descricao: roleData.descricao,
+          nivel_acesso: roleData.nivel_acesso,
+          ativo: usuarioData.ativo
+        };
+
+        setUsuario(usuarioCompleto);
+
+        // Buscar permissões
+        try {
+          const { data: permissoesData, error: permissoesError } = await supabase
+            .rpc('obter_permissoes_usuario', { p_usuario_id: userId });
+
+          if (!permissoesError && permissoesData) {
+            setPermissoes(permissoesData);
+          }
+        } catch (permError) {
+          // Silenciar erro de permissões
+        }
+      }
+    } catch (error) {
+      // Silenciar erro geral
+    }
   };
 
-  // Criar usuário usando dados do auth (sem consulta extra)
-  const createUserFromAuth = (authUser: User) => {
-    setUser({
-      id: authUser.id,
-      email: authUser.email!,
-      nome: authUser.user_metadata?.nome || authUser.email!.split('@')[0],
-      tipo: authUser.user_metadata?.tipo || 'admin',
-      ativo: true
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
+    if (error) throw error;
   };
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      setIsLoading(true);
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      if (data.user && isAdminUser(data.user)) {
-        createUserFromAuth(data.user);
-        return { success: true };
-      } else {
-        await supabase.auth.signOut();
-        return { success: false, error: 'Acesso não autorizado para área administrativa' };
-      }
-    } catch (error) {
-      console.error('Erro no login:', error);
-      return { success: false, error: 'Erro interno do servidor' };
-    } finally {
-      setIsLoading(false);
-    }
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   };
 
-  const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-    } catch (error) {
-      console.error('Erro no logout:', error);
-      setUser(null);
-    }
+  const temPermissao = (permissao: string): boolean => {
+    return permissoes.some(p => p.permissao_nome === permissao);
+  };
+
+  const temRole = (role: string): boolean => {
+    return usuario?.role_nome === role;
+  };
+
+  const temNivelAcesso = (nivel: number): boolean => {
+    return (usuario?.nivel_acesso || 0) >= nivel;
+  };
+
+  const value = {
+    user,
+    usuario,
+    permissoes,
+    loading,
+    signIn,
+    signOut,
+    temPermissao,
+    temRole,
+    temNivelAcesso,
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated: !!user,
-      isLoading,
-      login,
-      logout
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }; 

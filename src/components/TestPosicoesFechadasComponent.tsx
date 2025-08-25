@@ -1,36 +1,29 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from "lucide-react";
 import { TestPosicoesFechadasService } from "@/lib/testPosicoesFechadasService";
 
-export function TestPosicoesFechadasComponent() {
-  const [results, setResults] = useState<any>(null);
+export const TestPosicoesFechadasComponent: React.FC = () => {
+  const [testResults, setTestResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   const runTests = async () => {
     setLoading(true);
     try {
-      console.log('=== INICIANDO TESTES ===');
-      
       // Teste de conexão
       const connectionTest = await TestPosicoesFechadasService.testConnection();
-      console.log('Teste de conexão:', connectionTest);
       
-      // Teste direto do banco
+      // Teste do banco
       const databaseTest = await TestPosicoesFechadasService.testDirectDatabase();
-      console.log('Teste do banco:', databaseTest);
       
-      setResults({
+      setTestResults({
         connection: connectionTest,
-        database: databaseTest,
-        timestamp: new Date().toISOString()
+        database: databaseTest
       });
     } catch (error) {
-      console.error('Erro nos testes:', error);
-      setResults({
-        error: error.message,
-        timestamp: new Date().toISOString()
+      setTestResults({
+        error: error.message
       });
     } finally {
       setLoading(false);
@@ -61,7 +54,7 @@ export function TestPosicoesFechadasComponent() {
           )}
         </Button>
 
-        {results && (
+        {testResults && (
           <div className="space-y-4">
             <Card>
               <CardHeader>
@@ -69,7 +62,7 @@ export function TestPosicoesFechadasComponent() {
               </CardHeader>
               <CardContent>
                 <pre className="text-xs bg-muted p-4 rounded overflow-auto max-h-96">
-                  {JSON.stringify(results, null, 2)}
+                  {JSON.stringify(testResults, null, 2)}
                 </pre>
               </CardContent>
             </Card>
@@ -83,20 +76,20 @@ export function TestPosicoesFechadasComponent() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Status:</span>
-                      <span className={results.connection?.success ? 'text-green-600' : 'text-red-600'}>
-                        {results.connection?.success ? '✅ Sucesso' : '❌ Falha'}
+                      <span className={testResults.connection?.success ? 'text-green-600' : 'text-red-600'}>
+                        {testResults.connection?.success ? '✅ Sucesso' : '❌ Falha'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Sessão:</span>
-                      <span className={results.connection?.sessionValid ? 'text-green-600' : 'text-red-600'}>
-                        {results.connection?.sessionValid ? '✅ Válida' : '❌ Inválida'}
+                      <span className={testResults.connection?.sessionValid ? 'text-green-600' : 'text-red-600'}>
+                        {testResults.connection?.sessionValid ? '✅ Válida' : '❌ Inválida'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Token:</span>
-                      <span className={results.connection?.tokenPresent ? 'text-green-600' : 'text-red-600'}>
-                        {results.connection?.tokenPresent ? '✅ Presente' : '❌ Ausente'}
+                      <span className={testResults.connection?.tokenPresent ? 'text-green-600' : 'text-red-600'}>
+                        {testResults.connection?.tokenPresent ? '✅ Presente' : '❌ Ausente'}
                       </span>
                     </div>
                   </div>
@@ -111,14 +104,14 @@ export function TestPosicoesFechadasComponent() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Status:</span>
-                      <span className={results.database?.success ? 'text-green-600' : 'text-red-600'}>
-                        {results.database?.success ? '✅ Sucesso' : '❌ Falha'}
+                      <span className={testResults.database?.success ? 'text-green-600' : 'text-red-600'}>
+                        {testResults.database?.success ? '✅ Sucesso' : '❌ Falha'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Vagas Encontradas:</span>
                       <span className="text-blue-600">
-                        {results.database?.data?.length || 0}
+                        {testResults.database?.data?.length || 0}
                       </span>
                     </div>
                   </div>

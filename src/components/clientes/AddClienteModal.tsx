@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, Mail, Phone, MapPin, Calendar, User, FileText, Search, Loader2 } from "lucide-react";
 import { CNPJService, CNPJData } from "@/lib/cnpjService";
+import { ClientesService } from "@/lib/clientesService";
 import { useToast } from "@/hooks/use-toast";
 
 interface AddClienteModalProps {
@@ -62,6 +63,11 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
 
   const [errors, setErrors] = useState<Partial<ClienteData>>({});
   const [isLoadingCNPJ, setIsLoadingCNPJ] = useState(false);
+  const [cnpjValidation, setCnpjValidation] = useState<{
+    isValid: boolean;
+    message: string;
+    isChecking: boolean;
+  }>({ isValid: true, message: "", isChecking: false });
   const { toast } = useToast();
 
   const handleInputChange = (field: keyof ClienteData, value: string) => {
@@ -69,6 +75,68 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+    
+    // Validar CNPJ em tempo real
+    if (field === 'cnpj') {
+      validateCNPJInRealTime(value);
+    }
+    
+    // Validar número (apenas números)
+    if (field === 'numero') {
+      const numbersOnly = value.replace(/\D/g, '');
+      if (numbersOnly !== value) {
+        setFormData(prev => ({ ...prev, [field]: numbersOnly }));
+      }
+    }
+  };
+
+  const validateCNPJInRealTime = async (cnpj: string) => {
+    const cnpjClean = cnpj.replace(/[^\d]/g, '');
+    
+    // Resetar validação
+    setCnpjValidation({ isValid: true, message: "", isChecking: false });
+    
+    // Se CNPJ está vazio, não validar
+    if (!cnpjClean) {
+      return;
+    }
+    
+    // Verificar formato básico
+    if (cnpjClean.length !== 14) {
+      setCnpjValidation({ 
+        isValid: false, 
+        message: "CNPJ deve ter 14 dígitos", 
+        isChecking: false 
+      });
+      return;
+    }
+    
+    // Verificar se CNPJ já existe no banco
+    setCnpjValidation({ isValid: true, message: "Verificando...", isChecking: true });
+    
+    try {
+      const clientes = await ClientesService.listarClientes(cnpjClean);
+      
+      if (clientes && clientes.length > 0) {
+        setCnpjValidation({ 
+          isValid: false, 
+          message: `CNPJ já cadastrado para: ${clientes[0].razao_social}`, 
+          isChecking: false 
+        });
+      } else {
+        setCnpjValidation({ 
+          isValid: true, 
+          message: "CNPJ disponível", 
+          isChecking: false 
+        });
+      }
+    } catch (error) {
+      setCnpjValidation({ 
+        isValid: true, 
+        message: "", 
+        isChecking: false 
+      });
     }
   };
 
@@ -128,11 +196,15 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
       newErrors.cnpj = "CNPJ é obrigatório";
     } else if (!/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(formData.cnpj)) {
       newErrors.cnpj = "CNPJ deve estar no formato XX.XXX.XXX/XXXX-XX";
+    } else if (!cnpjValidation.isValid) {
+      newErrors.cnpj = cnpjValidation.message;
     }
 
     // Validações de endereço
     if (!formData.cep.trim()) {
       newErrors.cep = "CEP é obrigatório";
+    } else if (!/^\d{5}-\d{3}$/.test(formData.cep)) {
+      newErrors.cep = "CEP deve estar no formato 00000-000";
     }
 
     if (!formData.logradouro.trim()) {
@@ -141,6 +213,8 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
 
     if (!formData.numero.trim()) {
       newErrors.numero = "Número é obrigatório";
+    } else if (!/^\d+$/.test(formData.numero)) {
+      newErrors.numero = "Número deve conter apenas dígitos";
     }
 
     if (!formData.bairro.trim()) {
@@ -155,9 +229,19 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
       newErrors.estado = "Estado é obrigatório";
     }
 
+    // Validação de inscrição estadual (opcional, mas se preenchida deve ter formato válido)
+    if (formData.inscricaoEstadual.trim() && !/^[A-Za-z0-9.-]+$/.test(formData.inscricaoEstadual)) {
+      newErrors.inscricaoEstadual = "Inscrição estadual deve conter apenas letras, números, pontos e hífens";
+    }
+
     // Validações de contato
-    if (formData.celular.trim() && !/^\(\d{2}\) \d{4,5}-\d{4}$/.test(formData.celular)) {
-      newErrors.celular = "Celular deve estar no formato (XX) XXXXX-XXXX ou (XX) XXXX-XXXX";
+    if (formData.celular.trim()) {
+      const celularClean = formData.celular.replace(/\D/g, "");
+      if (celularClean.length !== 10 && celularClean.length !== 11) {
+        newErrors.celular = "Celular deve ter 10 ou 11 dígitos (DDD + número)";
+      } else if (!/^\(\d{2}\) \d{4,5}-\d{4}$/.test(formData.celular)) {
+        newErrors.celular = "Celular deve estar no formato (XX) XXXXX-XXXX ou (XX) XXXX-XXXX";
+      }
     }
 
     if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -194,6 +278,7 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
       estado: "",
     });
     setErrors({});
+    setCnpjValidation({ isValid: true, message: "", isChecking: false });
     onClose();
   };
 
@@ -203,15 +288,22 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
   };
 
   const formatCelular = (value: string) => {
+    // Remove tudo que não é número
     const numbers = value.replace(/\D/g, "");
-    if (numbers.length === 10) {
-      // Formato: DDD + 8 dígitos
-      return numbers.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
-    } else if (numbers.length === 11) {
-      // Formato: DDD + 9 dígitos
-      return numbers.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+    
+    // Limita a 11 dígitos (DDD + 9 dígitos)
+    const limitedNumbers = numbers.slice(0, 11);
+    
+    if (limitedNumbers.length === 0) return "";
+    if (limitedNumbers.length <= 2) return `(${limitedNumbers}`;
+    if (limitedNumbers.length <= 6) {
+      return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2)}`;
     }
-    return value;
+    if (limitedNumbers.length <= 10) {
+      return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2, 6)}-${limitedNumbers.slice(6)}`;
+    }
+    // 11 dígitos (DDD + 9 dígitos)
+    return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2, 7)}-${limitedNumbers.slice(7)}`;
   };
 
   const formatCEP = (value: string) => {
@@ -249,7 +341,9 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
                   handleInputChange("cnpj", formatted);
                 }}
                 maxLength={18}
-                className={errors.cnpj ? "border-destructive" : ""}
+                className={`${errors.cnpj ? "border-destructive" : ""} ${
+                  cnpjValidation.isValid && cnpjValidation.message ? "border-green-500" : ""
+                }`}
               />
               <Button
                 type="button"
@@ -268,6 +362,20 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
             </div>
             {errors.cnpj && (
               <p className="text-sm text-destructive">{errors.cnpj}</p>
+            )}
+            {cnpjValidation.message && !errors.cnpj && (
+              <p className={`text-sm ${
+                cnpjValidation.isValid ? "text-green-600" : "text-destructive"
+              }`}>
+                {cnpjValidation.isChecking ? (
+                  <span className="flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    {cnpjValidation.message}
+                  </span>
+                ) : (
+                  cnpjValidation.message
+                )}
+              </p>
             )}
           </div>
 
@@ -474,7 +582,11 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
                 placeholder="Digite a inscrição estadual"
                 value={formData.inscricaoEstadual}
                 onChange={(e) => handleInputChange("inscricaoEstadual", e.target.value)}
+                className={errors.inscricaoEstadual ? "border-destructive" : ""}
               />
+              {errors.inscricaoEstadual && (
+                <p className="text-sm text-destructive">{errors.inscricaoEstadual}</p>
+              )}
             </div>
 
             <div className="space-y-2">

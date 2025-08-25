@@ -37,7 +37,6 @@ interface UpdateContaReceber {
 // Mock do serviço temporário
 const ContasReceberService = {
   async update(id: string, data: UpdateContaReceber): Promise<ContaReceber> {
-    console.log('Atualizando conta:', id, data);
     return {} as ContaReceber;
   }
 };

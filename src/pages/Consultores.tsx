@@ -1,219 +1,125 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  Search, 
-  Plus, 
-  MoreHorizontal, 
-  Mail, 
-  Shield,
-  User,
-  Edit,
-  Trash2,
-  UserCheck,
-  UserX,
-  Briefcase
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { ConsultoresService } from "@/lib/consultoresService";
-import { supabase } from "@/lib/supabase";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AddConsultorModal } from "@/components/consultores/AddConsultorModal";
 import { EditConsultorModal } from "@/components/consultores/EditConsultorModal";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Settings, UserCheck, UserX, Users, Shield } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
+import { usuariosService } from "@/lib/usuariosService";
 
-interface Consultor {
+interface Usuario {
   id: string;
-  email: string;
   nome: string;
-  tipo: 'admin' | 'consultor';
+  email: string;
   ativo: boolean;
+  role_id: string;
+  role_nome: string;
+  role_descricao: string;
+  nivel_acesso: number;
   created_at: string;
-  updated_at: string;
-  vagas_count?: number;
 }
 
 export default function Consultores() {
-  const [consultores, setConsultores] = useState<Consultor[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingConsultor, setEditingConsultor] = useState<Consultor | null>(null);
-  const [deletingConsultor, setDeletingConsultor] = useState<Consultor | null>(null);
-  const { toast } = useToast();
-  const { user } = useAuth();
-
-  const isAdmin = user?.tipo === 'admin';
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
+  
+  const navigate = useNavigate();
+  const { podeVerUsuarios, podeCriarUsuarios, podeEditarUsuarios, podeExcluirUsuarios } = usePermissions();
 
   useEffect(() => {
-    fetchConsultores();
+    loadUsuarios();
   }, []);
 
-  const fetchConsultores = async () => {
+  const loadUsuarios = async () => {
     try {
       setLoading(true);
-      
-      // Buscar todos os usuários com contagem de vagas
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select(`
-          *,
-          vagas_count:vagas(count)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Transformar para incluir contagem
-      const consultoresWithCount = data.map((consultor: any) => ({
-        ...consultor,
-        vagas_count: consultor.vagas_count?.[0]?.count || 0
-      }));
-
-      setConsultores(consultoresWithCount);
+      const usuarios = await usuariosService.listarUsuarios();
+      setUsuarios(usuarios);
     } catch (error) {
-      console.error('Erro ao carregar consultores:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os consultores.",
-        variant: "destructive",
-      });
+      console.error('Erro ao carregar usuários:', error);
+      toast.error('Erro ao carregar usuários');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (consultor: Consultor) => {
-    try {
-      console.log('Iniciando exclusão de usuário:', consultor.id);
-      
-      // Usar função SQL RPC para excluir usuário
-      const { data: result, error } = await supabase
-        .rpc('excluir_usuario_admin', {
-          p_id: consultor.id
-        });
-
-      if (error) {
-        console.error('Erro do RPC:', error);
-        throw new Error(error.message || 'Erro ao excluir usuário');
-      }
-
-      console.log('Usuário excluído com sucesso:', result);
-
-      toast({
-        title: "Sucesso",
-        description: "Usuário removido com sucesso.",
-      });
-
-      fetchConsultores();
-    } catch (error: any) {
-      console.error('Erro ao deletar usuário:', error);
-      
-      if (error.message?.includes('vagas associadas')) {
-        toast({
-          title: "Erro",
-          description: "Não é possível excluir usuário com vagas associadas.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Erro",
-          description: error.message || "Não foi possível remover o usuário.",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setDeletingConsultor(null);
-    }
+  const handleEditUsuario = (usuario: Usuario) => {
+    setSelectedUsuario(usuario);
+    setEditModalOpen(true);
   };
 
-  const toggleStatus = async (consultor: Consultor) => {
+  const handleToggleStatus = async (usuario: Usuario) => {
     try {
-      console.log('Alterando status do usuário:', consultor.id, 'para:', !consultor.ativo);
-      
-      // Usar função SQL RPC para atualizar status
-      const { data: result, error } = await supabase
-        .rpc('atualizar_usuario_admin', {
-          p_id: consultor.id,
-          p_email: null,
-          p_nome: null,
-          p_tipo: null,
-          p_ativo: !consultor.ativo
-        });
-
-      if (error) {
-        console.error('Erro do RPC:', error);
-        throw new Error(error.message || 'Erro ao alterar status');
-      }
-
-      console.log('Status alterado com sucesso:', result);
-
-      toast({
-        title: "Sucesso",
-        description: `Usuário ${!consultor.ativo ? 'ativado' : 'desativado'} com sucesso.`,
-      });
-
-      fetchConsultores();
-    } catch (error: any) {
+      await usuariosService.desativarUsuario(usuario.id, !usuario.ativo);
+      toast.success(`Usuário ${usuario.ativo ? 'desativado' : 'ativado'} com sucesso`);
+      loadUsuarios();
+    } catch (error) {
       console.error('Erro ao alterar status:', error);
-      toast({
-        title: "Erro",
-        description: error.message || "Não foi possível alterar o status do usuário.",
-        variant: "destructive",
-      });
+      toast.error('Erro ao alterar status do usuário');
     }
   };
 
-  const filteredConsultores = consultores.filter(consultor =>
-    consultor.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    consultor.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleDeleteUsuario = async (usuario: Usuario) => {
+    if (!confirm(`Tem certeza que deseja excluir o usuário ${usuario.nome}?`)) {
+      return;
+    }
+
+    try {
+      await usuariosService.deletarUsuario(usuario.id);
+      toast.success('Usuário excluído com sucesso');
+      loadUsuarios();
+    } catch (error) {
+      console.error('Erro ao excluir usuário:', error);
+      toast.error('Erro ao excluir usuário');
+    }
+  };
+
+  const filteredUsuarios = usuarios.filter(usuario =>
+    usuario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    usuario.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    usuario.role_nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getInitials = (nome: string, email: string) => {
-    if (nome) {
-      return nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin_master': return 'bg-red-100 text-red-800';
+      case 'admin_nivel1': return 'bg-orange-100 text-orange-800';
+      case 'diretoria': return 'bg-purple-100 text-purple-800';
+      case 'coordenador': return 'bg-blue-100 text-blue-800';
+      case 'consultor': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
-    return email.substring(0, 2).toUpperCase();
   };
 
-  const getTipoLabel = (tipo: string) => {
-    return tipo === 'admin' ? 'Administrador' : 'Consultor';
+  const getRoleLabel = (role: string) => {
+    return role.replace('_', ' ').toUpperCase();
   };
 
-  const getTipoBadge = (tipo: string) => {
-    if (tipo === 'admin') {
-      return <Badge className="bg-purple-100 text-purple-800"><Shield className="w-3 h-3 mr-1" />Admin</Badge>;
-    }
-    return <Badge className="bg-blue-100 text-blue-800"><User className="w-3 h-3 mr-1" />Consultor</Badge>;
-  };
-
-  if (!isAdmin) {
+  if (!podeVerUsuarios()) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <Shield className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Acesso Restrito</h3>
-            <p className="text-gray-500">Apenas administradores podem gerenciar consultores.</p>
+            <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-muted-foreground">
+              Acesso Negado
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Você não tem permissão para visualizar esta página.
+            </p>
           </div>
         </div>
       </MainLayout>
@@ -224,143 +130,166 @@ export default function Consultores() {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Usuários do Sistema</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Usuários</h1>
             <p className="text-muted-foreground">
-              Gerencie usuários, consultores e administradores
+              Gerencie os usuários e permissões do sistema
             </p>
           </div>
-          <Button onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Usuário
+          <div className="flex items-center space-x-2">
+            <PermissionGuard permissao="usuarios_gerenciar_roles">
+              <Button variant="outline" onClick={() => navigate('/gerenciar-permissoes')}>
+                <Settings className="mr-2 h-4 w-4" />
+                Gerenciar Permissões
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissao="usuarios_criar">
+              <Button onClick={() => setAddModalOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar Usuário
           </Button>
+            </PermissionGuard>
+          </div>
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Filtros</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        {/* Search */}
+        <div className="flex items-center space-x-2">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por nome ou email..."
+              placeholder="Buscar usuários..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+              className="pl-8"
                 />
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Consultores List */}
+        {/* Users Table */}
         <Card>
           <CardHeader>
-            <CardTitle>
-              Usuários ({filteredConsultores.length})
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Usuários ({filteredUsuarios.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="text-muted-foreground mt-2">Carregando consultores...</p>
+              <div className="flex items-center justify-center py-8">
+                <div className="text-muted-foreground">Carregando usuários...</div>
               </div>
-            ) : filteredConsultores.length === 0 ? (
+            ) : filteredUsuarios.length === 0 ? (
               <div className="text-center py-8">
-                <User className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum usuário encontrado</h3>
-                <p className="text-gray-500 mb-4">
-                  {searchTerm ? "Tente ajustar os filtros de busca." : "Comece adicionando o primeiro usuário."}
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-muted-foreground">
+                  Nenhum usuário encontrado
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {searchTerm ? "Tente ajustar os termos de busca." : "Comece adicionando um novo usuário."}
                 </p>
-                {!searchTerm && (
-                  <Button onClick={() => setIsAddModalOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar Usuário
-                  </Button>
-                )}
               </div>
             ) : (
-              <div className="grid gap-4">
-                {filteredConsultores.map((consultor) => (
-                  <div
-                    key={consultor.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src="" alt={consultor.nome || consultor.email} />
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {getInitials(consultor.nome, consultor.email)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium">
-                            {consultor.nome || consultor.email}
-                          </h3>
-                          {getTipoBadge(consultor.tipo)}
-                          {!consultor.ativo && (
-                            <Badge variant="secondary" className="bg-gray-100 text-gray-800">
-                              Inativo
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center text-sm text-muted-foreground space-x-4">
-                          <div className="flex items-center">
-                            <Mail className="h-4 w-4 mr-1" />
-                            {consultor.email}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Usuário</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Nível</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Criado em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsuarios.map((usuario) => (
+                    <TableRow key={usuario.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                            <Users className="h-4 w-4 text-primary" />
                           </div>
-                          <div className="flex items-center">
-                            <Briefcase className="h-4 w-4 mr-1" />
-                            {consultor.vagas_count} vagas
+                          <div>
+                            <div className="font-medium">{usuario.nome}</div>
+                            <div className="text-sm text-muted-foreground">{usuario.email}</div>
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <Badge className={getRoleColor(usuario.role_nome)}>
+                            {getRoleLabel(usuario.role_nome)}
+                          </Badge>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {usuario.role_descricao}
                       </div>
                     </div>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditingConsultor(consultor)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleStatus(consultor)}>
-                          {consultor.ativo ? (
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-sm">{usuario.nivel_acesso}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          {usuario.ativo ? (
                             <>
-                              <UserX className="h-4 w-4 mr-2" />
-                              Desativar
+                              <UserCheck className="h-4 w-4 text-green-600" />
+                              <span className="text-green-600 text-sm">Ativo</span>
                             </>
                           ) : (
                             <>
-                              <UserCheck className="h-4 w-4 mr-2" />
-                              Ativar
+                              <UserX className="h-4 w-4 text-red-600" />
+                              <span className="text-red-600 text-sm">Inativo</span>
                             </>
                           )}
-                        </DropdownMenuItem>
-                        {consultor.vagas_count === 0 && (
-                          <DropdownMenuItem 
-                            onClick={() => setDeletingConsultor(consultor)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(usuario.created_at).toLocaleDateString('pt-BR')}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end space-x-1">
+                          <PermissionGuard permissao="usuarios_editar">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditUsuario(usuario)}
+                              title="Editar usuário"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </PermissionGuard>
+                          
+                          <PermissionGuard permissao="usuarios_editar">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleStatus(usuario)}
+                              title={usuario.ativo ? "Desativar usuário" : "Ativar usuário"}
+                              className={usuario.ativo ? "text-red-600 hover:text-red-700" : "text-green-600 hover:text-green-700"}
+                            >
+                              {usuario.ativo ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                            </Button>
+                          </PermissionGuard>
+                          
+                          <PermissionGuard permissao="usuarios_excluir">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteUsuario(usuario)}
+                              title="Excluir usuário"
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </PermissionGuard>
                   </div>
+                      </TableCell>
+                    </TableRow>
                 ))}
-              </div>
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
@@ -368,47 +297,17 @@ export default function Consultores() {
 
       {/* Modals */}
       <AddConsultorModal
-        open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-        onSuccess={() => {
-          fetchConsultores();
-          setIsAddModalOpen(false);
-        }}
+        open={addModalOpen}
+        onOpenChange={setAddModalOpen}
+        onSuccess={loadUsuarios}
       />
 
-      {editingConsultor && (
         <EditConsultorModal
-          open={!!editingConsultor}
-          onOpenChange={() => setEditingConsultor(null)}
-          consultor={editingConsultor}
-          onSuccess={() => {
-            fetchConsultores();
-            setEditingConsultor(null);
-          }}
-        />
-      )}
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deletingConsultor} onOpenChange={() => setDeletingConsultor(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir o usuário "{deletingConsultor?.nome || deletingConsultor?.email}"?
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deletingConsultor && handleDelete(deletingConsultor)}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        consultor={selectedUsuario}
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        onSuccess={loadUsuarios}
+      />
     </MainLayout>
   );
 } 

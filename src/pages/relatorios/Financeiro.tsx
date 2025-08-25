@@ -104,7 +104,6 @@ const ContasReceberService = {
     ];
   },
   async uploadNotaFiscal(id: string, file: File): Promise<string> {
-    console.log('Upload de nota fiscal:', id, file.name);
     return 'https://example.com/nota-fiscal.pdf';
   }
 };
@@ -133,7 +132,7 @@ const getTipoBadge = (tipo: string) => {
 };
 
 const Financeiro = () => {
-  const { user } = useAuth();
+  const { usuario, temRole } = useAuth();
   const [contasReceber, setContasReceber] = useState<ContaReceber[]>([]);
   const [stats, setStats] = useState<ContaReceberStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -306,7 +305,7 @@ const Financeiro = () => {
                           <Button size="sm" variant="outline">
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {user?.tipo === 'admin' && (
+                          {temRole('admin_master') && (
                             <>
                               <input
                                 type="file"

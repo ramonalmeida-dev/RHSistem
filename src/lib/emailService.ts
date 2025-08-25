@@ -149,9 +149,6 @@ export async function sendEmail(to: string, subject: string, body: string): Prom
   try {
     // Aqui seria integrado com serviço de email real (SendGrid, AWS SES, etc.)
     // Em desenvolvimento, apenas simula o envio
-    if (import.meta.env.DEV) {
-      console.log('Email enviado (simulação):', { to, subject: subject.substring(0, 50) + '...' });
-    }
     
     // Simulação de envio
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -171,7 +168,7 @@ export async function sendAutomaticEmail(
 ): Promise<boolean> {
   const email = generateEmail(status, data);
   if (!email) {
-    console.warn(`Nenhum template encontrado para o status: ${status}`);
+    // Nenhum template encontrado para o status
     return false;
   }
 
