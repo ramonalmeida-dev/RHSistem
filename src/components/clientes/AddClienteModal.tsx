@@ -240,7 +240,7 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
       if (celularClean.length !== 10 && celularClean.length !== 11) {
         newErrors.celular = "Celular deve ter 10 ou 11 dígitos (DDD + número)";
       } else if (!/^\(\d{2}\) \d{4,5}-\d{4}$/.test(formData.celular)) {
-        newErrors.celular = "Celular deve estar no formato (XX) XXXXX-XXXX ou (XX) XXXX-XXXX";
+      newErrors.celular = "Celular deve estar no formato (XX) XXXXX-XXXX ou (XX) XXXX-XXXX";
       }
     }
 

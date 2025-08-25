@@ -263,26 +263,6 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
       newErrors.dataRecebimento = "Data de recebimento é obrigatória";
     }
 
-    if (!formData.dataFormatacaoPerfil) {
-      newErrors.dataFormatacaoPerfil = "Data de formatação do perfil é obrigatória";
-    }
-
-    if (!formData.dataDivulgacao) {
-      newErrors.dataDivulgacao = "Data de divulgação é obrigatória";
-    }
-
-    if (!formData.dataInicioSelecao) {
-      newErrors.dataInicioSelecao = "Data de início da seleção é obrigatória";
-    }
-
-    if (!formData.dataEnvioCurriculos) {
-      newErrors.dataEnvioCurriculos = "Data de envio dos currículos é obrigatória";
-    }
-
-    if (!formData.dataEncerramento) {
-      newErrors.dataEncerramento = "Data de encerramento é obrigatória";
-    }
-
     if (!formData.consultorId || formData.consultorId === "") {
       newErrors.consultorId = "Consultor é obrigatório" as any;
     }
@@ -422,11 +402,11 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                 </Label>
                 <Input
                   id="salario"
-                  placeholder="Ex: 10.000"
+                  type="number"
+                  placeholder="Ex: 10000"
                   value={formData.salario}
                   onChange={(e) => {
-                    const valorFormatado = formatarMoeda(e.target.value);
-                    handleInputChange("salario", valorFormatado);
+                    handleInputChange("salario", e.target.value);
                   }}
                   className={errors.salario ? "border-destructive" : ""}
                 />
@@ -479,7 +459,7 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
               <div className="space-y-2">
                 <Label htmlFor="dataFormatacaoPerfil" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Data de Formatação do Perfil *
+                  Data de Formatação do Perfil
                 </Label>
                 <Input
                   id="dataFormatacaoPerfil"
@@ -487,11 +467,8 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                   min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataFormatacaoPerfil}
                   onChange={(e) => handleInputChange("dataFormatacaoPerfil", e.target.value)}
-                  className={errors.dataFormatacaoPerfil || (formData.dataFormatacaoPerfil && !validarDataPosterior(formData.dataFormatacaoPerfil, formData.dataRecebimento)) ? "border-destructive" : ""}
+                  className={formData.dataFormatacaoPerfil && !validarDataPosterior(formData.dataFormatacaoPerfil, formData.dataRecebimento) ? "border-destructive" : ""}
                 />
-                {errors.dataFormatacaoPerfil && (
-                  <p className="text-sm text-destructive">{errors.dataFormatacaoPerfil}</p>
-                )}
                 {formData.dataFormatacaoPerfil && !validarDataPosterior(formData.dataFormatacaoPerfil, formData.dataRecebimento) && (
                   <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
                 )}
@@ -500,7 +477,7 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
               <div className="space-y-2">
                 <Label htmlFor="dataDivulgacao" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Data de Divulgação *
+                  Data de Divulgação
                 </Label>
                 <Input
                   id="dataDivulgacao"
@@ -508,11 +485,8 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                   min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataDivulgacao}
                   onChange={(e) => handleInputChange("dataDivulgacao", e.target.value)}
-                  className={errors.dataDivulgacao || (formData.dataDivulgacao && !validarDataPosterior(formData.dataDivulgacao, formData.dataRecebimento)) ? "border-destructive" : ""}
+                  className={formData.dataDivulgacao && !validarDataPosterior(formData.dataDivulgacao, formData.dataRecebimento) ? "border-destructive" : ""}
                 />
-                {errors.dataDivulgacao && (
-                  <p className="text-sm text-destructive">{errors.dataDivulgacao}</p>
-                )}
                 {formData.dataDivulgacao && !validarDataPosterior(formData.dataDivulgacao, formData.dataRecebimento) && (
                   <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
                 )}
@@ -521,7 +495,7 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
               <div className="space-y-2">
                 <Label htmlFor="dataInicioSelecao" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Data de Início da Seleção *
+                  Data de Início da Seleção
                 </Label>
                 <Input
                   id="dataInicioSelecao"
@@ -529,11 +503,8 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                   min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataInicioSelecao}
                   onChange={(e) => handleInputChange("dataInicioSelecao", e.target.value)}
-                  className={errors.dataInicioSelecao || (formData.dataInicioSelecao && !validarDataPosterior(formData.dataInicioSelecao, formData.dataRecebimento)) ? "border-destructive" : ""}
+                  className={formData.dataInicioSelecao && !validarDataPosterior(formData.dataInicioSelecao, formData.dataRecebimento) ? "border-destructive" : ""}
                 />
-                {errors.dataInicioSelecao && (
-                  <p className="text-sm text-destructive">{errors.dataInicioSelecao}</p>
-                )}
                 {formData.dataInicioSelecao && !validarDataPosterior(formData.dataInicioSelecao, formData.dataRecebimento) && (
                   <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
                 )}
@@ -542,7 +513,7 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
               <div className="space-y-2">
                 <Label htmlFor="dataEnvioCurriculos" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Data de Envio dos CVs *
+                  Data de Envio dos CVs
                 </Label>
                 <Input
                   id="dataEnvioCurriculos"
@@ -550,11 +521,8 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                   min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataEnvioCurriculos}
                   onChange={(e) => handleInputChange("dataEnvioCurriculos", e.target.value)}
-                  className={errors.dataEnvioCurriculos || (formData.dataEnvioCurriculos && !validarDataPosterior(formData.dataEnvioCurriculos, formData.dataRecebimento)) ? "border-destructive" : ""}
+                  className={formData.dataEnvioCurriculos && !validarDataPosterior(formData.dataEnvioCurriculos, formData.dataRecebimento) ? "border-destructive" : ""}
                 />
-                {errors.dataEnvioCurriculos && (
-                  <p className="text-sm text-destructive">{errors.dataEnvioCurriculos}</p>
-                )}
                 {formData.dataEnvioCurriculos && !validarDataPosterior(formData.dataEnvioCurriculos, formData.dataRecebimento) && (
                   <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
                 )}
@@ -563,7 +531,7 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
               <div className="space-y-2">
                 <Label htmlFor="dataEncerramento" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Data de Encerramento *
+                  Data de Encerramento
                 </Label>
                 <Input
                   id="dataEncerramento"
@@ -571,11 +539,8 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                   min={getDataMinima(formData.dataRecebimento)}
                   value={formData.dataEncerramento}
                   onChange={(e) => handleInputChange("dataEncerramento", e.target.value)}
-                  className={errors.dataEncerramento || (formData.dataEncerramento && !validarDataPosterior(formData.dataEncerramento, formData.dataRecebimento)) ? "border-destructive" : ""}
+                  className={formData.dataEncerramento && !validarDataPosterior(formData.dataEncerramento, formData.dataRecebimento) ? "border-destructive" : ""}
                 />
-                {errors.dataEncerramento && (
-                  <p className="text-sm text-destructive">{errors.dataEncerramento}</p>
-                )}
                 {formData.dataEncerramento && !validarDataPosterior(formData.dataEncerramento, formData.dataRecebimento) && (
                   <p className="text-sm text-destructive">Data deve ser igual ou posterior à data de recebimento</p>
                 )}

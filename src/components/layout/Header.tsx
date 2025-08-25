@@ -55,41 +55,41 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-end px-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-              <Avatar className="h-10 w-10">
-                <AvatarImage 
-                  src={usuario ? "/placeholder-avatar.jpg" : "/logo.jpeg"} 
-                  alt={usuario?.nome || "Lotus Recruit Hub"} 
-                />
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {usuario ? getUserInitials(usuario.nome) : "LR"}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end" forceMount>
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{usuario?.nome || "Usuário"}</p>
-                <p className="text-xs leading-none text-muted-foreground flex items-center gap-1">
-                  <Badge className={`text-xs px-2 py-0 ${getRoleColor(usuario?.role_nome)}`}>
-                    {getRoleLabel(usuario?.role_nome)}
-                  </Badge>
-                </p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {usuario?.email}
-                </p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Sair</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage 
+                    src={usuario ? "/placeholder-avatar.jpg" : "/logo.jpeg"} 
+                    alt={usuario?.nome || "Lotus Recruit Hub"} 
+                  />
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    {usuario ? getUserInitials(usuario.nome) : "LR"}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{usuario?.nome || "Usuário"}</p>
+                  <p className="text-xs leading-none text-muted-foreground flex items-center gap-1">
+                    <Badge className={`text-xs px-2 py-0 ${getRoleColor(usuario?.role_nome)}`}>
+                      {getRoleLabel(usuario?.role_nome)}
+                    </Badge>
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {usuario?.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
       </div>
     </header>
   );

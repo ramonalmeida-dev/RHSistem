@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import {
+import { 
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -108,26 +108,26 @@ export function Sidebar({ className }: SidebarProps) {
     const Icon = item.icon;
 
     const buttonContent = (
-      <Button
-        variant={isActive ? "secondary" : "ghost"}
-        className={cn(
-          "w-full justify-start gap-3 h-10",
-          collapsed && "justify-center px-2",
-          isActive && "bg-secondary text-secondary-foreground"
-        )}
-      >
-        <Icon className={cn("h-4 w-4 flex-shrink-0", collapsed && "h-5 w-5")} />
-        {!collapsed && (
-          <>
-            <span className="flex-1 text-left truncate">{item.title}</span>
-            {item.badge && (
-              <span className="ml-auto bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full flex-shrink-0">
-                {item.badge}
-              </span>
-            )}
-          </>
-        )}
-      </Button>
+        <Button
+          variant={isActive ? "secondary" : "ghost"}
+          className={cn(
+            "w-full justify-start gap-3 h-10",
+            collapsed && "justify-center px-2",
+            isActive && "bg-secondary text-secondary-foreground"
+          )}
+        >
+          <Icon className={cn("h-4 w-4 flex-shrink-0", collapsed && "h-5 w-5")} />
+          {!collapsed && (
+            <>
+              <span className="flex-1 text-left truncate">{item.title}</span>
+              {item.badge && (
+                <span className="ml-auto bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full flex-shrink-0">
+                  {item.badge}
+                </span>
+              )}
+            </>
+          )}
+        </Button>
     );
 
     if (collapsed) {
@@ -154,13 +154,13 @@ export function Sidebar({ className }: SidebarProps) {
 
   return (
     <TooltipProvider>
-      <div
-        className={cn(
-          "flex h-full flex-col border-r bg-background",
-          collapsed ? "w-16" : "w-64",
-          className
-        )}
-      >
+    <div
+      className={cn(
+        "flex h-full flex-col border-r bg-background",
+        collapsed ? "w-16" : "w-64",
+        className
+      )}
+    >
       {/* Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b">
         <div className="flex justify-start">
@@ -243,7 +243,7 @@ export function Sidebar({ className }: SidebarProps) {
           </div>
         </div>
       )}
-      </div>
+    </div>
     </TooltipProvider>
   );
 }
