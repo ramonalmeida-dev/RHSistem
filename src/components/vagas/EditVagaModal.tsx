@@ -239,10 +239,6 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
   const validateForm = (): boolean => {
     const newErrors: Partial<VagaData> = {};
 
-    if (!formData.numeroVaga.trim()) {
-      newErrors.numeroVaga = "Número da vaga é obrigatório";
-    }
-
     if (!formData.empresaId || formData.empresaId === "") {
       newErrors.empresaId = "Empresa é obrigatória" as any;
     }
@@ -335,18 +331,15 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
               <div className="space-y-2">
                 <Label htmlFor="numeroVaga" className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  Número da Vaga *
+                  Número da Vaga
                 </Label>
                 <Input
                   id="numeroVaga"
-                  placeholder="Ex: DEV-001, MKT-002"
+                  placeholder="Ex: 001, 002"
                   value={formData.numeroVaga}
-                  onChange={(e) => handleInputChange("numeroVaga", e.target.value)}
-                  className={errors.numeroVaga ? "border-destructive" : ""}
+                  readOnly
+                  className="bg-muted"
                 />
-                {errors.numeroVaga && (
-                  <p className="text-sm text-destructive">{errors.numeroVaga}</p>
-                )}
               </div>
 
               <div className="space-y-2">

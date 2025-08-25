@@ -90,6 +90,7 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [errors, setErrors] = useState<Partial<VagaData>>({});
+  const [isLoadingNumeroVaga, setIsLoadingNumeroVaga] = useState(false);
 
   // Função para formatar valor monetário
   const formatarMoeda = (valor: string): string => {
@@ -108,6 +109,27 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
     return valor.replace(/\D/g, '');
   };
 
+  // Função para gerar o próximo número da vaga
+  const gerarNumeroVaga = async () => {
+    try {
+      setIsLoadingNumeroVaga(true);
+      const { data, error } = await supabase.rpc('gerar_proximo_numero_vaga');
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setFormData(prev => ({ ...prev, numeroVaga: data }));
+      }
+    } catch (error) {
+      console.error('Erro ao gerar número da vaga:', error);
+      toast.error('Erro ao gerar número da vaga');
+    } finally {
+      setIsLoadingNumeroVaga(false);
+    }
+  };
+
   // Função para calcular data mínima baseada na data de recebimento
   const getDataMinima = (dataRecebimento: string): string => {
     if (!dataRecebimento) return '';
@@ -124,6 +146,9 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Gerar número da vaga automaticamente
+        await gerarNumeroVaga();
+        
         // Carregar clientes
         const { data: clientesData } = await supabase
           .from('clientes')
@@ -161,10 +186,6 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
 
   const validateForm = (): boolean => {
     const newErrors: Partial<VagaData> = {};
-
-    if (!formData.numeroVaga.trim()) {
-      newErrors.numeroVaga = "Número da vaga é obrigatório";
-    }
 
     if (!formData.empresaId || formData.empresaId === "") {
       newErrors.empresaId = "Empresa é obrigatória" as any;
@@ -266,17 +287,18 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
               <div className="space-y-2">
                 <Label htmlFor="numeroVaga" className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  Número da Vaga *
+                  Número da Vaga
                 </Label>
                 <Input
                   id="numeroVaga"
-                  placeholder="Ex: DEV-001, MKT-002"
+                  placeholder={isLoadingNumeroVaga ? "Gerando..." : "Ex: 001, 002"}
                   value={formData.numeroVaga}
-                  onChange={(e) => handleInputChange("numeroVaga", e.target.value)}
-                  className={errors.numeroVaga ? "border-destructive" : ""}
+                  readOnly
+                  disabled={isLoadingNumeroVaga}
+                  className="bg-muted"
                 />
-                {errors.numeroVaga && (
-                  <p className="text-sm text-destructive">{errors.numeroVaga}</p>
+                {isLoadingNumeroVaga && (
+                  <p className="text-sm text-muted-foreground">Gerando número automático...</p>
                 )}
               </div>
 

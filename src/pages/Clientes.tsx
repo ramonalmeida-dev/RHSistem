@@ -372,7 +372,7 @@ const Clientes = () => {
                   )}
                   <Input
                     ref={searchInputRef}
-                    placeholder="Buscar por razão social, CNPJ, email ou telefone..."
+                    placeholder="Buscar por nome fantasia..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
