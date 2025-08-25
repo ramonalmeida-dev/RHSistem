@@ -402,11 +402,11 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
                 </Label>
                 <Input
                   id="salario"
-                  type="number"
-                  placeholder="Ex: 10000"
+                  placeholder="Ex: 10.000"
                   value={formData.salario}
                   onChange={(e) => {
-                    handleInputChange("salario", e.target.value);
+                    const valorFormatado = formatarMoeda(e.target.value);
+                    handleInputChange("salario", valorFormatado);
                   }}
                   className={errors.salario ? "border-destructive" : ""}
                 />
