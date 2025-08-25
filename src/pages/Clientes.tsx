@@ -124,13 +124,12 @@ const Clientes = () => {
       });
 
       setIsAddModalOpen(false);
-      loadClientes();
-      setFilteredClientes([]); // Resetar filtrados para recarregar
-    } catch (error) {
+      await loadClientes(searchTerm); // Recarregar com o termo de busca atual
+    } catch (error: any) {
       console.error('Erro ao criar cliente:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível criar o cliente.",
+        description: error.message || "Não foi possível criar o cliente.",
         variant: "destructive",
       });
     } finally {
@@ -143,6 +142,8 @@ const Clientes = () => {
     if (!selectedCliente) return;
     
     try {
+      setIsLoading(true);
+      
       // Mapear dados do modal para o formato esperado pelo backend
       const mappedData = {
         id: selectedCliente.id,
@@ -174,14 +175,15 @@ const Clientes = () => {
       });
       setIsEditModalOpen(false);
       setSelectedCliente(null);
-      loadClientes(); // Recarregar lista
-      setFilteredClientes([]); // Resetar filtrados para recarregar
-    } catch (error) {
+      await loadClientes(searchTerm); // Recarregar com o termo de busca atual
+    } catch (error: any) {
       toast({
         title: "Erro ao atualizar cliente",
-        description: "Erro interno do servidor",
+        description: error.message || "Erro interno do servidor",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -192,20 +194,22 @@ const Clientes = () => {
     }
 
     try {
+      setIsLoading(true);
       await ClientesService.excluirCliente(cliente.id);
       
       toast({
         title: "Cliente excluído com sucesso",
         description: `${cliente.razao_social} foi removido da carteira`,
       });
-      loadClientes(); // Recarregar lista
-      setFilteredClientes([]); // Resetar filtrados para recarregar
-    } catch (error) {
+      await loadClientes(searchTerm); // Recarregar com o termo de busca atual
+    } catch (error: any) {
       toast({
         title: "Erro ao excluir cliente",
-        description: "Erro interno do servidor",
+        description: error.message || "Erro interno do servidor",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -215,27 +219,37 @@ const Clientes = () => {
     setIsEditModalOpen(true);
   };
 
-  // Buscar clientes com debounce (atualizando apenas a listagem)
+  // Buscar clientes com debounce
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
-      if (searchTerm) {
+      if (searchTerm.trim()) {
         setIsSearching(true);
         try {
-          const data = await ClientesService.listarClientes(searchTerm);
-          setFilteredClientes(data || []); // Atualizar apenas os filtrados
+          const data = await ClientesService.listarClientes(searchTerm.trim());
+          setFilteredClientes(data || []);
         } catch (error) {
           console.error('Erro ao buscar clientes:', error);
+          setFilteredClientes([]);
         } finally {
           setIsSearching(false);
         }
       } else {
         // Se não há termo de busca, mostrar todos os clientes
-        setFilteredClientes(clientes);
+        setIsSearching(true);
+        try {
+          const data = await ClientesService.listarClientes();
+          setFilteredClientes(data || []);
+        } catch (error) {
+          console.error('Erro ao carregar clientes:', error);
+          setFilteredClientes([]);
+        } finally {
+          setIsSearching(false);
+        }
       }
-    }, 500); // Aumentado para 500ms para dar mais tempo de digitar
+    }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, clientes]);
+  }, [searchTerm]);
 
   // Usar clientes filtrados do estado
 

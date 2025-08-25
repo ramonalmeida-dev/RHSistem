@@ -48,18 +48,8 @@ interface UpdateClienteData extends Partial<CreateClienteData> {
 }
 
 export class ClientesService {
-  private static async getAuthHeaders() {
-    const { data: { session } } = await supabase.auth.getSession();
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session?.access_token}`
-    };
-  }
-
   static async listarClientes(search?: string) {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
       if (search) {
         // Usar função RPC para busca inteligente
         const { data, error } = await supabase
@@ -93,19 +83,17 @@ export class ClientesService {
 
   static async buscarCliente(id: string) {
     try {
-      const headers = await this.getAuthHeaders();
-      const response = await fetch(`https://ustodblurmtaoexntmru.supabase.co/functions/v1/clientes?id=${id}`, {
-        method: 'GET',
-        headers
-      });
+      const { data, error } = await supabase
+        .from('clientes')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error?.message || 'Erro ao buscar cliente');
+      if (error) {
+        throw error;
       }
 
-      return result.data;
+      return data;
     } catch (error: any) {
       console.error('Erro ao buscar cliente:', error);
       throw error;
@@ -114,20 +102,20 @@ export class ClientesService {
 
   static async criarCliente(data: CreateClienteData) {
     try {
-      const headers = await this.getAuthHeaders();
-      const response = await fetch('https://ustodblurmtaoexntmru.supabase.co/functions/v1/clientes', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(data)
-      });
+      const { data: newCliente, error } = await supabase
+        .from('clientes')
+        .insert({
+          ...data,
+          ativo: data.ativo ?? true
+        })
+        .select()
+        .single();
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error?.message || 'Erro ao criar cliente');
+      if (error) {
+        throw error;
       }
 
-      return result.data;
+      return newCliente;
     } catch (error: any) {
       console.error('Erro ao criar cliente:', error);
       throw error;
@@ -136,20 +124,20 @@ export class ClientesService {
 
   static async atualizarCliente(data: UpdateClienteData) {
     try {
-      const headers = await this.getAuthHeaders();
-      const response = await fetch('https://ustodblurmtaoexntmru.supabase.co/functions/v1/clientes', {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(data)
-      });
+      const { id, ...updateData } = data;
+      
+      const { data: updatedCliente, error } = await supabase
+        .from('clientes')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error?.message || 'Erro ao atualizar cliente');
+      if (error) {
+        throw error;
       }
 
-      return result.data;
+      return updatedCliente;
     } catch (error: any) {
       console.error('Erro ao atualizar cliente:', error);
       throw error;
@@ -158,19 +146,26 @@ export class ClientesService {
 
   static async excluirCliente(id: string) {
     try {
-      const headers = await this.getAuthHeaders();
-      const response = await fetch(`https://ustodblurmtaoexntmru.supabase.co/functions/v1/clientes?id=${id}`, {
-        method: 'DELETE',
-        headers
-      });
+      // Verificar se cliente tem vagas associadas
+      const { data: vagas } = await supabase
+        .from('vagas')
+        .select('id')
+        .eq('empresa_id', id);
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error?.message || 'Erro ao excluir cliente');
+      if (vagas && vagas.length > 0) {
+        throw new Error('Não é possível deletar cliente com vagas associadas');
       }
 
-      return result.data;
+      const { error } = await supabase
+        .from('clientes')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+
+      return { message: 'Cliente deletado com sucesso' };
     } catch (error: any) {
       console.error('Erro ao excluir cliente:', error);
       throw error;
