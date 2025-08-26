@@ -12,6 +12,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { sanitizeFilename } from "@/lib/utils";
 import { Upload, FileText, X } from "lucide-react";
 
 interface AddCurriculoModalProps {
@@ -63,7 +64,9 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
       // Se há um currículo, fazer upload primeiro
       let url_storage = "";
       if (curriculoFile) {
-        const fileName = `${Date.now()}_${curriculoFile.name}`;
+        // Sanitizar o nome do arquivo para evitar problemas com caracteres especiais
+        const sanitizedName = sanitizeFilename(curriculoFile.name);
+        const fileName = `${Date.now()}_${sanitizedName}`;
         const filePath = `banco_curriculos/${fileName}`;
         
         const { error: uploadError } = await supabase.storage

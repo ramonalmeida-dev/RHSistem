@@ -159,7 +159,7 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
         ...prev,
         razaoSocial: cnpjData.razao_social,
         nomeFantasia: cnpjData.nome_fantasia || "",
-        cep: cnpjData.cep,
+        cep: formatCEP(cnpjData.cep), // Formatar CEP automaticamente
         logradouro: cnpjData.logradouro,
         numero: cnpjData.numero,
         complemento: cnpjData.complemento || "",

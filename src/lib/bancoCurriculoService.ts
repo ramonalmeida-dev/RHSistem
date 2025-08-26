@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { sanitizeFilename } from './utils';
 
 export type DisponibilidadeCandidato = 'disponivel' | 'empregado' | 'indisponivel';
 export type CandidatoBancoStatus = 'ativo' | 'inativo';
@@ -132,7 +133,8 @@ export async function uploadCurriculoToBanco(
 
     // Gerar nome único para o arquivo
     const timestamp = Date.now();
-    const fileName = `${candidatoId}_${timestamp}_${file.name}`;
+    const sanitizedName = sanitizeFilename(file.name);
+    const fileName = `${candidatoId}_${timestamp}_${sanitizedName}`;
     const filePath = `banco_curriculos/${fileName}`;
 
     // Fazer upload para o Supabase Storage
