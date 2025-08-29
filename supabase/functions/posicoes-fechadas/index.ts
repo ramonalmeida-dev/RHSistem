@@ -166,8 +166,47 @@ serve(async (req) => {
             )
           }
 
+          // Validar arquivo
+          const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+          const maxSize = 5 * 1024 * 1024 // 5MB
+          
+          if (!allowedTypes.includes(file.type)) {
+            return new Response(
+              JSON.stringify({ error: 'Tipo de arquivo não suportado. Use PDF, DOC ou DOCX.' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+          }
+          
+          if (file.size > maxSize) {
+            return new Response(
+              JSON.stringify({ error: 'Arquivo muito grande. Máximo 5MB permitido.' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+          }
+
+          // Sanitizar nome do arquivo
+          const sanitizeFilename = (filename: string): string => {
+            const lastDotIndex = filename.lastIndexOf('.')
+            const name = lastDotIndex !== -1 ? filename.substring(0, lastDotIndex) : filename
+            const extension = lastDotIndex !== -1 ? filename.substring(lastDotIndex) : ''
+            
+            const normalized = name
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+              .replace(/[^a-zA-Z0-9\s-]/g, '') // Remove caracteres especiais exceto hífen
+              .replace(/\s+/g, '_') // Substitui espaços por underscore
+              .replace(/_+/g, '_') // Remove underscores duplicados
+              .replace(/^_|_$/g, '') // Remove underscores no início e fim
+              .toLowerCase() // Converte para minúsculas
+            
+            const sanitizedName = normalized || 'arquivo'
+            return sanitizedName + extension
+          }
+
+          const sanitizedName = sanitizeFilename(file.name)
+          const fileName = `${Date.now()}_${sanitizedName}`
+          
           // Upload do arquivo para o storage
-          const fileName = `${Date.now()}_${file.name}`
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('curriculos-atualizados')
             .upload(fileName, file)
@@ -187,7 +226,7 @@ serve(async (req) => {
               candidato_id: candidato_id,
               candidato_nome: candidato_nome,
               curriculo_atualizado_url: urlData.publicUrl,
-              curriculo_atualizado_nome: file.name,
+              curriculo_atualizado_nome: sanitizedName,
               pretensao_salarial: pretensao_salarial ? parseFloat(pretensao_salarial) : null,
               regime_trabalho: regime_trabalho || null,
               observacoes: observacoes || null

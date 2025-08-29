@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { CandidatosExternosService } from '../lib/candidatosExternosService';
 import { supabase } from '../lib/supabase';
+import { validateAndProcessFile } from '../lib/utils';
 import { 
   CandidatoExterno, 
   CreateCandidatoExterno, 
@@ -374,11 +375,25 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
     setError(null);
 
     try {
+      // Validar e processar o arquivo
+      const validation = validateAndProcessFile(file, {
+        maxSize: 5 * 1024 * 1024, // 5MB
+        allowedTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        requireSanitization: true
+      });
+
+      if (!validation.isValid) {
+        setError(`Erro na validação do arquivo: ${validation.errors.join(', ')}`);
+        return false;
+      }
+
+      const processedFile = validation.processedFile!;
+      
       // Upload real para Supabase Storage
-      const fileName = `${user.id}_${Date.now()}_${file.name}`;
+      const fileName = `${user.id}_${Date.now()}_${processedFile.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('curriculos')
-        .upload(fileName, file, {
+        .upload(fileName, processedFile, {
           cacheControl: '3600',
           upsert: false
         });
@@ -398,9 +413,9 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
 
       const response = await CandidatosExternosService.atualizar(candidato.id, {
         curriculo_url: curriculoUrl,
-        curriculo_nome: file.name,
-        curriculo_tamanho: file.size,
-        curriculo_tipo: file.type
+        curriculo_nome: processedFile.name,
+        curriculo_tamanho: processedFile.size,
+        curriculo_tipo: processedFile.type
       });
 
       if (!response.success) {
@@ -412,9 +427,9 @@ export const CandidatoExternoProvider: React.FC<CandidatoExternoProviderProps> =
       setCandidato(prev => prev ? {
         ...prev,
         curriculo_url: curriculoUrl,
-        curriculo_nome: file.name,
-        curriculo_tamanho: file.size,
-        curriculo_tipo: file.type
+        curriculo_nome: processedFile.name,
+        curriculo_tamanho: processedFile.size,
+        curriculo_tipo: processedFile.type
       } : null);
 
       return true;

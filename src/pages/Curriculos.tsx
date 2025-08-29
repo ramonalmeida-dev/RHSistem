@@ -49,6 +49,8 @@ import { SendToVagaModal } from "@/components/curriculos/SendToVagaModal";
 import { AddCurriculoModal } from "@/components/curriculos/AddCurriculoModal";
 import { EditCandidatoModal } from "@/components/candidatos/EditCandidatoModal";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 // Tipos para o banco de currículos
 interface BancoCurriculoWithCandidato {
@@ -120,6 +122,8 @@ const renderStars = (rating: number) => {
 };
 
 const Curriculos = () => {
+  const { podeCriarCandidatos, podeEditarCandidatos, podeExcluirCandidatos } = usePermissions();
+  
   const [curriculos, setCurriculos] = useState<BancoCurriculoWithCandidato[]>([]);
   const [stats, setStats] = useState<BancoCurriculoStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -437,10 +441,12 @@ const Curriculos = () => {
               Gerencie seu banco de talentos ({totalItems} currículos)
             </p>
           </div>
-          <Button className="bg-gradient-primary hover:opacity-90" onClick={() => setAddCurriculoModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Adicionar CV
-          </Button>
+          <PermissionGuard permissao="candidatos_criar">
+            <Button className="bg-gradient-primary hover:opacity-90" onClick={() => setAddCurriculoModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar CV
+            </Button>
+          </PermissionGuard>
         </div>
 
         {/* Stats Summary */}
@@ -632,10 +638,12 @@ const Curriculos = () => {
                                   <Eye className="mr-2 h-4 w-4" />
                                   Ver Detalhes
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleEditCandidato(curriculo)}>
-                                  <User className="mr-2 h-4 w-4" />
-                                  Editar Candidato
-                                </DropdownMenuItem>
+                                <PermissionGuard permissao="candidatos_editar">
+                                  <DropdownMenuItem onClick={() => handleEditCandidato(curriculo)}>
+                                    <User className="mr-2 h-4 w-4" />
+                                    Editar Candidato
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
                                 <DropdownMenuItem onClick={() => handleDownload(curriculo)}>
                                   <Download className="mr-2 h-4 w-4" />
                                   Baixar CV
@@ -644,13 +652,15 @@ const Curriculos = () => {
                                   <Send className="mr-2 h-4 w-4" />
                                   Enviar para Vaga
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => handleDeleteClick(curriculo)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Excluir
-                                </DropdownMenuItem>
+                                <PermissionGuard permissao="candidatos_excluir">
+                                  <DropdownMenuItem 
+                                    onClick={() => handleDeleteClick(curriculo)}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </td>

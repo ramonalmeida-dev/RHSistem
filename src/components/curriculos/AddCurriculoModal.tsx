@@ -12,7 +12,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { sanitizeFilename } from "@/lib/utils";
+import { validateAndProcessFile } from "@/lib/utils";
 import { Upload, FileText, X } from "lucide-react";
 
 interface AddCurriculoModalProps {
@@ -63,15 +63,27 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
     try {
       // Se há um currículo, fazer upload primeiro
       let url_storage = "";
+      let processedFileName = "";
       if (curriculoFile) {
-        // Sanitizar o nome do arquivo para evitar problemas com caracteres especiais
-        const sanitizedName = sanitizeFilename(curriculoFile.name);
-        const fileName = `${Date.now()}_${sanitizedName}`;
+        // Validar e processar o arquivo
+        const validation = validateAndProcessFile(curriculoFile, {
+          maxSize: 5 * 1024 * 1024, // 5MB
+          allowedTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+          requireSanitization: true
+        });
+
+        if (!validation.isValid) {
+          throw new Error(`Erro na validação do arquivo: ${validation.errors.join(', ')}`);
+        }
+
+        const processedFile = validation.processedFile!;
+        processedFileName = processedFile.name;
+        const fileName = `${Date.now()}_${processedFileName}`;
         const filePath = `banco_curriculos/${fileName}`;
         
         const { error: uploadError } = await supabase.storage
           .from('curriculos')
-          .upload(filePath, curriculoFile);
+          .upload(filePath, processedFile);
 
         if (uploadError) {
           console.error('Erro no upload do currículo:', uploadError);
@@ -96,7 +108,7 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
           p_observacoes: formData.observacoes || null,
           p_linkedin_url: formData.linkedin_url || null,
           p_portfolio_url: formData.portfolio_url || null,
-          p_nome_arquivo: curriculoFile?.name || null,
+          p_nome_arquivo: processedFileName || curriculoFile?.name || null,
           p_url_storage: url_storage || null,
           p_tamanho_bytes: curriculoFile?.size || 0,
           p_tipo_arquivo: curriculoFile?.type || null
@@ -175,28 +187,23 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validar tipo de arquivo
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!allowedTypes.includes(file.type)) {
+      // Validar e processar o arquivo
+      const validation = validateAndProcessFile(file, {
+        maxSize: 5 * 1024 * 1024, // 5MB
+        allowedTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        requireSanitization: true
+      });
+
+      if (!validation.isValid) {
         toast({
-          title: "Tipo de arquivo não suportado",
-          description: "Por favor, selecione um arquivo PDF ou Word",
+          title: "Erro na validação do arquivo",
+          description: validation.errors.join(', '),
           variant: "destructive",
         });
         return;
       }
-      
-      // Validar tamanho (máximo 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Arquivo muito grande",
-          description: "O arquivo deve ter no máximo 5MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      setCurriculoFile(file);
+
+      setCurriculoFile(validation.processedFile!);
     }
   };
 

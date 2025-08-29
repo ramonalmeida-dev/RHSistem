@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { validateAndProcessFile } from './utils';
 
 export interface CurriculoUploadResult {
   success: boolean;
@@ -27,37 +28,31 @@ export async function uploadCurriculo(
   vagaId: string
 ): Promise<CurriculoUploadResult> {
   try {
-    // Validar tipo de arquivo
-    const allowedTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ];
-    
-    if (!allowedTypes.includes(file.type)) {
+    // Validar e processar o arquivo
+    const validation = validateAndProcessFile(file, {
+      maxSize: 5 * 1024 * 1024, // 5MB
+      allowedTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      requireSanitization: true
+    });
+
+    if (!validation.isValid) {
       return {
         success: false,
-        error: 'Tipo de arquivo não suportado. Use PDF, DOC ou DOCX.'
+        error: `Erro na validação do arquivo: ${validation.errors.join(', ')}`
       };
     }
 
-    // Validar tamanho (máximo 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return {
-        success: false,
-        error: 'Arquivo muito grande. Máximo 5MB permitido.'
-      };
-    }
+    const processedFile = validation.processedFile!;
 
     // Gerar nome único para o arquivo
     const timestamp = Date.now();
-    const fileName = `${candidatoId}_${timestamp}_${file.name}`;
+    const fileName = `${candidatoId}_${timestamp}_${processedFile.name}`;
     const filePath = `curriculos/${vagaId}/${fileName}`;
 
     // Fazer upload para o Supabase Storage
     const { data, error } = await supabase.storage
       .from('curriculos')
-      .upload(filePath, file, {
+      .upload(filePath, processedFile, {
         cacheControl: '3600',
         upsert: false
       });

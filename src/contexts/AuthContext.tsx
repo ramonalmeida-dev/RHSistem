@@ -44,25 +44,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      setUser(session?.user ?? null);
-      
+      // Verificar se é candidato externo antes de definir user
       if (session?.user) {
-        // Criar usuário básico a partir do JWT
-        const usuarioBasico: Usuario = {
-          id: session.user.id,
-          email: session.user.email || '',
-          nome: session.user.user_metadata?.nome || session.user.email?.split('@')[0] || 'Usuário',
-          role_id: '',
-          role_nome: 'admin_master', // Role padrão para acesso total
-          role_descricao: 'Administrador Master - Acesso total ao sistema',
-          nivel_acesso: 5,
-          ativo: true
-        };
+        const isExternalCandidate = session.user.user_metadata?.tipo === 'candidato_externo';
         
-        setUsuario(usuarioBasico);
-        
-        // Carregar dados completos em background (opcional)
-        carregarDadosCompletos(session.user.id);
+        if (isExternalCandidate) {
+          // Se for candidato externo, não definir nem user nem usuario
+          setUser(null);
+          setUsuario(null);
+        } else {
+          // Se for usuário interno, definir user e usuario
+          setUser(session.user);
+          
+          // Criar usuário básico a partir do JWT apenas para usuários internos
+          const usuarioBasico: Usuario = {
+            id: session.user.id,
+            email: session.user.email || '',
+            nome: session.user.user_metadata?.nome || session.user.email?.split('@')[0] || 'Usuário',
+            role_id: '',
+            role_nome: 'admin_master', // Role padrão para acesso total
+            role_descricao: 'Administrador Master - Acesso total ao sistema',
+            nivel_acesso: 5,
+            ativo: true
+          };
+          
+          setUsuario(usuarioBasico);
+          
+          // Carregar dados completos em background (opcional)
+          carregarDadosCompletos(session.user.id);
+        }
+      } else {
+        setUser(null);
+        setUsuario(null);
       }
       
       setLoading(false);
@@ -73,26 +86,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null);
-        
         if (session?.user) {
-          // Criar usuário básico imediatamente
-          const usuarioBasico: Usuario = {
-            id: session.user.id,
-            email: session.user.email || '',
-            nome: session.user.user_metadata?.nome || session.user.email?.split('@')[0] || 'Usuário',
-            role_id: '',
-            role_nome: 'admin_master',
-            role_descricao: 'Administrador Master - Acesso total ao sistema',
-            nivel_acesso: 5,
-            ativo: true
-          };
+          // Verificar se é candidato externo
+          const isExternalCandidate = session.user.user_metadata?.tipo === 'candidato_externo';
           
-          setUsuario(usuarioBasico);
-          
-          // Carregar dados completos em background
-          carregarDadosCompletos(session.user.id);
+          if (isExternalCandidate) {
+            // Se for candidato externo, não definir nem user nem usuario
+            setUser(null);
+            setUsuario(null);
+            setPermissoes([]);
+          } else {
+            // Se for usuário interno, definir user e usuario
+            setUser(session.user);
+            
+            // Criar usuário básico imediatamente apenas para usuários internos
+            const usuarioBasico: Usuario = {
+              id: session.user.id,
+              email: session.user.email || '',
+              nome: session.user.user_metadata?.nome || session.user.email?.split('@')[0] || 'Usuário',
+              role_id: '',
+              role_nome: 'admin_master',
+              role_descricao: 'Administrador Master - Acesso total ao sistema',
+              nivel_acesso: 5,
+              ativo: true
+            };
+            
+            setUsuario(usuarioBasico);
+            
+            // Carregar dados completos em background
+            carregarDadosCompletos(session.user.id);
+          }
         } else {
+          setUser(null);
           setUsuario(null);
           setPermissoes([]);
         }
@@ -106,6 +131,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const carregarDadosCompletos = async (userId: string) => {
     try {
+      // Verificar se o usuário atual é candidato externo
+      const currentUser = user;
+      if (currentUser?.user_metadata?.tipo === 'candidato_externo') {
+        return; // Não carregar dados para candidatos externos
+      }
+
       // Buscar dados do usuário
       const { data: usuarioData, error: usuarioError } = await supabase
         .from('usuarios')

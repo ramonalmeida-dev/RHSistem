@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { PosicoesFechadasService, CurriculoAtualizado } from "@/lib/posicoesFechadasService";
+import { validateAndProcessFile } from "@/lib/utils";
 
 interface CandidatoItemProps {
   candidato: {
@@ -58,32 +59,30 @@ export const CandidatoItem = ({ candidato, curriculoAtualizado, posicaoId, onRef
 
   // Notificar mudanças nos dados para o componente pai
   useEffect(() => {
-    onCandidatoDataChange(prevData => ({
-      ...prevData,
+    onCandidatoDataChange({
       [candidato.id]: {
         pretensaoSalarial,
         regimeTrabalho,
         observacoes
       }
-    }));
+    });
   }, [candidato.id, pretensaoSalarial, regimeTrabalho, observacoes, onCandidatoDataChange]);
 
   const handleFileChange = (file: File | null) => {
     if (file) {
-      // Validar tipo de arquivo
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error('Tipo de arquivo não suportado. Por favor, selecione um arquivo PDF ou Word');
+      // Validar e processar o arquivo
+      const validation = validateAndProcessFile(file, {
+        maxSize: 5 * 1024 * 1024, // 5MB
+        allowedTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        requireSanitization: true
+      });
+
+      if (!validation.isValid) {
+        toast.error(`Erro na validação do arquivo: ${validation.errors.join(', ')}`);
         return;
       }
-      
-      // Validar tamanho (máximo 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('O arquivo deve ter no máximo 5MB');
-        return;
-      }
-      
-      setCandidatoFile(file);
+
+      setCandidatoFile(validation.processedFile!);
     } else {
       setCandidatoFile(null);
     }

@@ -25,6 +25,8 @@ import { AddClienteModal } from "@/components/clientes/AddClienteModal";
 import { EditClienteModal } from "@/components/clientes/EditClienteModal";
 import { ClientesService } from "@/lib/clientesService";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 // Interface baseada no backend
 interface Cliente {
@@ -52,6 +54,8 @@ interface Cliente {
 }
 
 const Clientes = () => {
+  const { podeCriarClientes, podeEditarClientes, podeExcluirClientes } = usePermissions();
+  
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -347,13 +351,15 @@ const Clientes = () => {
               {searchTerm && ` - ${paginatedClientes.length} resultados na página atual`}
             </p>
           </div>
-          <Button 
-            className="bg-gradient-primary hover:opacity-90"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Cliente
-          </Button>
+          <PermissionGuard permissao="clientes_criar">
+            <Button 
+              className="bg-gradient-primary hover:opacity-90"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Cliente
+            </Button>
+          </PermissionGuard>
         </div>
 
         {/* Filters */}
@@ -397,10 +403,12 @@ const Clientes = () => {
                   }
                 </p>
                 {!searchTerm && (
-                  <Button onClick={() => setIsAddModalOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Adicionar Cliente
-                  </Button>
+                  <PermissionGuard permissao="clientes_criar">
+                    <Button onClick={() => setIsAddModalOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Adicionar Cliente
+                    </Button>
+                  </PermissionGuard>
                 )}
               </div>
             ) : (
@@ -467,15 +475,19 @@ const Clientes = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => openEditModal(cliente)}>
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  className="text-destructive"
-                                  onClick={() => handleDeleteCliente(cliente)}
-                                >
-                                  Excluir
-                                </DropdownMenuItem>
+                                <PermissionGuard permissao="clientes_editar">
+                                  <DropdownMenuItem onClick={() => openEditModal(cliente)}>
+                                    Editar
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
+                                <PermissionGuard permissao="clientes_excluir">
+                                  <DropdownMenuItem 
+                                    className="text-destructive"
+                                    onClick={() => handleDeleteCliente(cliente)}
+                                  >
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </td>

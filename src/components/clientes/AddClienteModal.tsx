@@ -116,12 +116,13 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
     setCnpjValidation({ isValid: true, message: "Verificando...", isChecking: true });
     
     try {
-      const clientes = await ClientesService.listarClientes(cnpjClean);
+      const clientesExistentes = await ClientesService.verificarCNPJExistente(cnpj);
       
-      if (clientes && clientes.length > 0) {
+      if (clientesExistentes && clientesExistentes.length > 0) {
+        const cliente = clientesExistentes[0];
         setCnpjValidation({ 
           isValid: false, 
-          message: `CNPJ já cadastrado para: ${clientes[0].razao_social}`, 
+          message: `CNPJ já cadastrado para: ${cliente.razao_social}`, 
           isChecking: false 
         });
       } else {
@@ -198,6 +199,8 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
       newErrors.cnpj = "CNPJ deve estar no formato XX.XXX.XXX/XXXX-XX";
     } else if (!cnpjValidation.isValid) {
       newErrors.cnpj = cnpjValidation.message;
+    } else if (cnpjValidation.isChecking) {
+      newErrors.cnpj = "Aguarde a verificação do CNPJ";
     }
 
     // Validações de endereço

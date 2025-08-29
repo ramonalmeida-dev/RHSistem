@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import * as XLSX from 'xlsx';
 
 export interface PosicaoFechada {
   id: string;
@@ -76,27 +77,13 @@ export interface PosicoesFechadasFilters {
 export class PosicoesFechadasService {
   static async list(filters?: PosicoesFechadasFilters): Promise<PosicaoFechada[]> {
     try {
-      // Usar consulta direta em vez da RPC function
-      let query = supabase
-        .from('posicoes_fechadas')
-        .select('*')
-        .order('data_encerramento', { ascending: false });
-
-      // Aplicar filtros
-      if (filters?.consultor_id) {
-        query = query.eq('consultor_id', filters.consultor_id);
-      }
-      if (filters?.empresa_id) {
-        query = query.eq('empresa_id', filters.empresa_id);
-      }
-      if (filters?.data_inicio) {
-        query = query.gte('data_encerramento', filters.data_inicio);
-      }
-      if (filters?.data_fim) {
-        query = query.lte('data_encerramento', filters.data_fim);
-      }
-
-      const { data, error } = await query;
+      // Usar a função RPC que verifica o status da vaga
+      const { data, error } = await supabase.rpc('get_posicoes_fechadas', {
+        p_consultor_id: filters?.consultor_id || null,
+        p_empresa_id: filters?.empresa_id || null,
+        p_data_inicio: filters?.data_inicio || null,
+        p_data_fim: filters?.data_fim || null
+      });
 
       if (error) {
         console.error('Erro na consulta:', error);
@@ -118,9 +105,7 @@ export class PosicoesFechadasService {
         data_encerramento: item.data_encerramento,
         status_posicao: item.status_posicao,
         candidatos_aprovados: item.candidatos_aprovados || [],
-        total_days: item.data_recebimento && item.data_encerramento 
-          ? Math.floor((new Date(item.data_encerramento).getTime() - new Date(item.data_recebimento).getTime()) / (1000 * 60 * 60 * 24))
-          : 0,
+        total_days: item.total_days || 0,
         observacoes: item.observacoes,
         created_at: item.created_at
       }));
@@ -322,7 +307,7 @@ export class PosicoesFechadasService {
 
   static async exportToExcel(filters?: PosicoesFechadasFilters): Promise<void> {
     try {
-      const { data, error } = await supabase.rpc('export_posicoes_fechadas_csv', {
+      const { data, error } = await supabase.rpc('export_posicoes_fechadas_xlsx', {
         p_consultor_id: filters?.consultor_id || null,
         p_empresa_id: filters?.empresa_id || null,
         p_data_inicio: filters?.data_inicio || null,
@@ -334,19 +319,127 @@ export class PosicoesFechadasService {
         throw new Error(`Erro na exportação: ${error.message}`);
       }
 
-      // Criar blob com o CSV
-      const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+      // Gerar arquivo XLSX com formatação
+      await this.generateXLSXFile(data);
+    } catch (error) {
+      console.error('Erro ao exportar posições fechadas:', error);
+      throw error;
+    }
+  }
+
+  private static async generateXLSXFile(data: any): Promise<void> {
+    try {
+      // Criar workbook
+      const workbook = XLSX.utils.book_new();
+      
+      // Processar cada seção
+      for (const section of data.sections) {
+        // Preparar dados: título + cabeçalhos + dados
+        const sheetData = [
+          [section.title], // Linha do título
+          section.columns, // Linha dos cabeçalhos
+          ...section.rows.map((row: any) => row.row) // Dados
+        ];
+        
+        // Criar worksheet
+        const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+        
+        // Definir largura das colunas
+        const columnWidths = [
+          { wch: 5 },   // Nº
+          { wch: 12 },  // Posição Nº
+          { wch: 10 },  // Data
+          { wch: 12 },  // Consultor Nº
+          { wch: 20 },  // Consultor Nome
+          { wch: 12 },  // Empresa Nº
+          { wch: 25 },  // Empresa Nome
+          { wch: 25 },  // Cargo / Posição
+          { wch: 12 },  // Salário
+          { wch: 20 },  // Aprovado/Admitido
+          { wch: 12 },  // Data Aprovação/Admissão
+          { wch: 12 }   // Total Days
+        ];
+        worksheet['!cols'] = columnWidths;
+        
+        // Mesclar células do título (A1:L1)
+        if (!worksheet['!merges']) worksheet['!merges'] = [];
+        worksheet['!merges'].push({
+          s: { r: 0, c: 0 },
+          e: { r: 0, c: section.columns.length - 1 }
+        });
+        
+        // Aplicar estilos básicos
+        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+        
+        // Estilo do título (linha 0)
+        const titleCell = XLSX.utils.encode_cell({ r: 0, c: 0 });
+        if (worksheet[titleCell]) {
+          worksheet[titleCell].s = {
+            font: { bold: true, color: { rgb: "FFFFFF" }, sz: 16 },
+            fill: { fgColor: { rgb: "008000" } }, // Verde
+            alignment: { horizontal: "center", vertical: "center" }
+          };
+        }
+        
+        // Estilo dos cabeçalhos (linha 1)
+        for (let col = 0; col < section.columns.length; col++) {
+          const cellRef = XLSX.utils.encode_cell({ r: 1, c: col });
+          if (worksheet[cellRef]) {
+            worksheet[cellRef].s = {
+              font: { bold: true, color: { rgb: "000000" }, sz: 12 },
+              fill: { fgColor: { rgb: "E6E6E6" } }, // Cinza claro
+              alignment: { horizontal: "center", vertical: "center" },
+              border: {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "thin", color: { rgb: "000000" } },
+                left: { style: "thin", color: { rgb: "000000" } },
+                right: { style: "thin", color: { rgb: "000000" } }
+              }
+            };
+          }
+        }
+        
+        // Estilo dos dados (linhas 2+)
+        for (let row = 2; row <= range.e.r; row++) {
+          for (let col = 0; col < section.columns.length; col++) {
+            const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+            if (worksheet[cellRef]) {
+              worksheet[cellRef].s = {
+                font: { color: { rgb: "000000" }, sz: 11 },
+                alignment: { horizontal: "center", vertical: "center" },
+                border: {
+                  top: { style: "thin", color: { rgb: "CCCCCC" } },
+                  bottom: { style: "thin", color: { rgb: "CCCCCC" } },
+                  left: { style: "thin", color: { rgb: "CCCCCC" } },
+                  right: { style: "thin", color: { rgb: "CCCCCC" } }
+                }
+              };
+            }
+          }
+        }
+        
+        // Adicionar worksheet ao workbook
+        XLSX.utils.book_append_sheet(workbook, worksheet, section.title.replace(/\s+/g, ''));
+      }
+      
+      // Gerar arquivo e fazer download
+      const excelBuffer = XLSX.write(workbook, { 
+        bookType: 'xlsx', 
+        type: 'array',
+        cellStyles: true
+      });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'posicoes-fechadas.csv';
+      a.download = `posicoes-fechadas-${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      console.error('Erro ao exportar posições fechadas:', error);
-      throw error;
+      console.error('Erro ao gerar arquivo Excel:', error);
+      throw new Error('Erro ao gerar arquivo Excel.');
     }
   }
 } 

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { uploadCurriculo, saveCurriculoReferenceBanco } from "@/lib/curriculoService";
+import { validateAndProcessFile } from "@/lib/utils";
 import { User, Mail, Phone, MapPin, GraduationCap, Briefcase, Star, Upload, FileText, X } from "lucide-react";
 
 interface EditCandidatoModalProps {
@@ -123,29 +124,25 @@ export function EditCandidatoModal({ isOpen, onClose, onSuccess, candidato, curr
   const handleCurriculoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validar tipo de arquivo
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!allowedTypes.includes(file.type)) {
+      // Validar e processar o arquivo
+      const validation = validateAndProcessFile(file, {
+        maxSize: 10 * 1024 * 1024, // 10MB
+        allowedTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        requireSanitization: true
+      });
+
+      if (!validation.isValid) {
         toast({
-          title: "Erro",
-          description: "Por favor, selecione um arquivo PDF ou Word",
+          title: "Erro na validação do arquivo",
+          description: validation.errors.join(', '),
           variant: "destructive"
         });
         return;
       }
 
-      // Validar tamanho (máximo 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "Erro",
-          description: "O arquivo deve ter no máximo 10MB",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      setCurriculoFile(file);
-      setCurriculoFileName(file.name);
+      const processedFile = validation.processedFile!;
+      setCurriculoFile(processedFile);
+      setCurriculoFileName(processedFile.name);
     }
   };
 
@@ -477,7 +474,10 @@ export function EditCandidatoModal({ isOpen, onClose, onSuccess, candidato, curr
                   step="0.5"
                   placeholder="0"
                   value={curriculoData.avaliacao}
-                  onChange={(e) => handleCurriculoChange("avaliacao", parseFloat(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value);
+                    handleCurriculoChange("avaliacao", isNaN(value) ? 0 : value);
+                  }}
                   className={errors.avaliacao ? "border-destructive" : ""}
                 />
                 {errors.avaliacao && (

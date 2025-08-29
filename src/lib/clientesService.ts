@@ -171,4 +171,22 @@ export class ClientesService {
       throw error;
     }
   }
+
+  static async verificarCNPJExistente(cnpj: string) {
+    try {
+      const { data, error } = await supabase
+        .rpc('verificar_cnpj_cliente', {
+          cnpj_busca: cnpj
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    } catch (error: any) {
+      console.error('Erro ao verificar CNPJ:', error);
+      throw error;
+    }
+  }
 } 

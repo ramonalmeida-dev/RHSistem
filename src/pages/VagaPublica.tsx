@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { Checkbox } from '../components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useToast } from '../hooks/use-toast';
+import { validateAndProcessFile } from '../lib/utils';
 import { Loader2, Building2, MapPin, Calendar, DollarSign, FileText, CheckCircle, XCircle, Upload, Send, Eye, ArrowLeft, User, PartyPopper, BriefcaseIcon, ArrowRight } from 'lucide-react';
 
 interface Pergunta {
@@ -41,16 +42,17 @@ const VagaPublica: React.FC = () => {
   const { toast } = useToast();
   
   // Contextos
-  const { user: adminUser } = useAuth();
+  const { user: adminUser, usuario } = useAuth();
   const { candidato, isAuthenticated, aplicarVaga, verificarCandidatura, loading, error } = useCandidatoExterno();
   
-  const isAdmin = !!adminUser;
+  const isAdmin = !!usuario; // Usar usuario ao invés de adminUser
   
   const [vaga, setVaga] = useState<any>(null);
   const [questionario, setQuestionario] = useState<Questionario | null>(null);
   const [jaCandidatou, setJaCandidatou] = useState(false);
   const [loadingVaga, setLoadingVaga] = useState(true);
   const [loadingCandidatura, setLoadingCandidatura] = useState(false);
+  const [loadingVerificacao, setLoadingVerificacao] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   
   // Dados do formulário
@@ -70,10 +72,10 @@ const VagaPublica: React.FC = () => {
   }, [vagaId]);
 
   useEffect(() => {
-    if (isAuthenticated && vagaId && !isAdmin) {
+    if (isAuthenticated && vagaId && !isAdmin && candidato) {
       verificarCandidaturaExistente();
     }
-  }, [isAuthenticated, vagaId, isAdmin]);
+  }, [isAuthenticated, vagaId, isAdmin, candidato]);
 
   useEffect(() => {
     // Definir opção padrão baseada no perfil do candidato
@@ -137,10 +139,13 @@ const VagaPublica: React.FC = () => {
     if (!vagaId || !isAuthenticated) return;
 
     try {
+      setLoadingVerificacao(true);
       const candidatou = await verificarCandidatura(vagaId);
       setJaCandidatou(candidatou);
     } catch (error) {
       console.error('Erro ao verificar candidatura:', error);
+    } finally {
+      setLoadingVerificacao(false);
     }
   };
 
@@ -220,11 +225,27 @@ const VagaPublica: React.FC = () => {
         // Usar currículo do perfil
         curriculoUrl = candidato.curriculo_url;
       } else if (curriculoSelecionado === 'arquivo' && curriculoFile) {
-        // Upload real para Supabase Storage
-        const fileName = `${Date.now()}_${curriculoFile.name}`;
+        // Validar e processar o arquivo
+        const validation = validateAndProcessFile(curriculoFile, {
+          maxSize: 5 * 1024 * 1024, // 5MB
+          allowedTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+          requireSanitization: true
+        });
+
+        if (!validation.isValid) {
+          toast({
+            title: "Erro na validação do arquivo",
+            description: validation.errors.join(', '),
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const processedFile = validation.processedFile!;
+        const fileName = `${Date.now()}_${processedFile.name}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('curriculos')
-          .upload(fileName, curriculoFile, {
+          .upload(fileName, processedFile, {
             cacheControl: '3600',
             upsert: false
           });
@@ -298,7 +319,7 @@ const VagaPublica: React.FC = () => {
         // Toast de sucesso
         toast({
           title: "🎉 Candidatura enviada!",
-          description: "Sua candidatura foi enviada com sucesso. A empresa entrará em contato caso você seja selecionado.",
+          description: "Sua candidatura foi enviada com sucesso. Entraremos em contato caso você seja selecionado.",
           duration: 5000,
         });
         
@@ -331,28 +352,23 @@ const VagaPublica: React.FC = () => {
   };
 
   const processFile = (file: File) => {
-    // Validar tipo de arquivo
-    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!allowedTypes.includes(file.type)) {
+    // Validar e processar o arquivo
+    const validation = validateAndProcessFile(file, {
+      maxSize: 5 * 1024 * 1024, // 5MB
+      allowedTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      requireSanitization: true
+    });
+
+    if (!validation.isValid) {
       toast({
-        title: "Formato inválido",
-        description: "Formato de arquivo não suportado. Use PDF, DOC ou DOCX.",
+        title: "Erro na validação do arquivo",
+        description: validation.errors.join(', '),
         variant: "destructive",
       });
       return;
     }
 
-    // Validar tamanho (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "Arquivo muito grande",
-        description: "O arquivo deve ter no máximo 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setCurriculoFile(file);
+    setCurriculoFile(validation.processedFile!);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -544,7 +560,7 @@ const VagaPublica: React.FC = () => {
             <Alert className="mb-6 border-green-200 bg-green-50">
               <PartyPopper className="h-4 w-4" />
               <AlertDescription className="text-green-700">
-                <strong>Candidatura enviada com sucesso!</strong> Sua candidatura foi recebida e está sendo analisada pela empresa.
+                <strong>Candidatura enviada com sucesso!</strong> Sua candidatura foi recebida e está sendo analisada.
               </AlertDescription>
             </Alert>
           )}
@@ -661,7 +677,19 @@ const VagaPublica: React.FC = () => {
                       
                       {!isAdmin ? (
                         <>
-                          {jaCandidatou ? (
+                          {loadingVerificacao ? (
+                            <div className="text-center py-6">
+                              <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+                              </div>
+                              <h4 className="text-lg font-bold text-blue-800 mb-2">
+                                Verificando candidatura...
+                              </h4>
+                              <p className="text-blue-700">
+                                Aguarde enquanto verificamos se você já se candidatou.
+                              </p>
+                            </div>
+                          ) : jaCandidatou ? (
                             <div className="text-center py-6">
                               <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                                 <CheckCircle className="h-8 w-8 text-green-600" />
@@ -673,7 +701,7 @@ const VagaPublica: React.FC = () => {
                                 Você já se candidatou para esta vaga.
                               </p>
                               <p className="text-sm text-gray-600">
-                                A empresa entrará em contato caso você seja selecionado.
+                                Entraremos em contato caso você seja selecionado.
                               </p>
                             </div>
                           ) : isAuthenticated ? (
@@ -753,9 +781,6 @@ const VagaPublica: React.FC = () => {
                           <User className="h-5 w-5" />
                           Candidatura para: {vaga.cargo}
                         </CardTitle>
-                        <CardDescription className="text-emerald-100">
-                          {vaga.empresa?.razao_social}
-                        </CardDescription>
                       </div>
                       <Button
                         onClick={handleVoltarStep}

@@ -45,6 +45,8 @@ import { EmailModal } from "@/components/candidatos/EmailModal";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { VAGA_STATUS_CONFIG, VAGA_SUBSTATUS_CONFIG, VagaStatus, VagaSubstatus } from "@/types";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 // Tipos baseados no backend
 interface Vaga {
@@ -122,6 +124,8 @@ const getAvailableActions = (vaga: Vaga) => {
 };
 
 const Vagas = () => {
+  const { podeCriarVagas, podeEditarVagas, podeExcluirVagas } = usePermissions();
+  
   const [selectedVaga, setSelectedVaga] = useState<Vaga | null>(null);
   const [selectedVagaCandidatos, setSelectedVagaCandidatos] = useState<Candidate[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
@@ -267,13 +271,17 @@ const Vagas = () => {
     }
     
     return true;
-  });
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+
 
   // Paginação
   const totalPages = Math.ceil(filteredVagas.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedVagas = filteredVagas.slice(startIndex, endIndex);
+
+
 
   // Resetar página quando mudar filtros
   useEffect(() => {
@@ -381,7 +389,23 @@ const Vagas = () => {
         }
       }
 
-      setVagas(prev => [data, ...prev]);
+      // Adicionar a nova vaga ao estado e limpar filtros para garantir que apareça
+      setVagas(prev => {
+        const newVagas = [data, ...prev];
+        return newVagas;
+      });
+      
+      // Limpar filtros para garantir que a nova vaga apareça
+      setSearchTerm('');
+      setStatusFilter('todas');
+      setEmpresaFilter('todas');
+      setConsultorFilter('todos');
+      setDataInicioFilter('');
+      setDataFimFilter('');
+      setSalarioMinFilter('');
+      setSalarioMaxFilter('');
+      setCurrentPage(1);
+      
       setIsAddModalOpen(false);
       
       toast({
@@ -857,10 +881,12 @@ const Vagas = () => {
                       }
                     </p>
                     {!searchTerm && statusFilter === 'todas' && (
-                      <Button onClick={() => setIsAddModalOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Adicionar Vaga
-                      </Button>
+                      <PermissionGuard permissao="vagas_criar">
+                        <Button onClick={() => setIsAddModalOpen(true)}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Adicionar Vaga
+                        </Button>
+                      </PermissionGuard>
                     )}
                   </div>
                 ) : (
@@ -922,10 +948,12 @@ const Vagas = () => {
                                       <Kanban className="mr-2 h-4 w-4" />
                                       Gerenciar Kanban
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleEditVaga(vaga)}>
-                                      <FileText className="mr-2 h-4 w-4" />
-                                      Editar Vaga
-                                    </DropdownMenuItem>
+                                    <PermissionGuard permissao="vagas_editar">
+                                      <DropdownMenuItem onClick={() => handleEditVaga(vaga)}>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        Editar Vaga
+                                      </DropdownMenuItem>
+                                    </PermissionGuard>
                                     {vaga.status === 'publicada' && (
                                       <DropdownMenuItem 
                                         onClick={() => window.open(`/vaga/${vaga.id}`, '_blank')}
@@ -957,13 +985,15 @@ const Vagas = () => {
                                       <XCircle className="mr-2 h-4 w-4" />
                                       Encerrar Vaga
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem 
-                                      onClick={() => handleDeleteVaga(vaga)}
-                                      className="text-destructive"
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Excluir Vaga
-                                    </DropdownMenuItem>
+                                    <PermissionGuard permissao="vagas_excluir">
+                                      <DropdownMenuItem 
+                                        onClick={() => handleDeleteVaga(vaga)}
+                                        className="text-destructive"
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Excluir Vaga
+                                      </DropdownMenuItem>
+                                    </PermissionGuard>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </td>

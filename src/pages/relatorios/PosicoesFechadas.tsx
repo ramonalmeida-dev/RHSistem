@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Filter, 
   Calendar,
   Building2,
   Users,
@@ -16,16 +15,16 @@ import {
   Eye,
   UserCheck,
   Loader2,
-  Plus,
   Clock,
   Mail
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PosicaoFechadaModal } from "@/components/relatorios/PosicaoFechadaModal";
-import { ProcessarVagaModal } from "@/components/relatorios/ProcessarVagaModal";
 import { ContratacaoModal } from "@/components/relatorios/ContratacaoModal";
 import { toast } from "sonner";
 import { PosicoesFechadasService, PosicaoFechada, PosicoesFechadasFilters } from "@/lib/posicoesFechadasService";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const STATUS_COLORS = {
   em_analise: "bg-yellow-100 text-yellow-800",
@@ -46,12 +45,14 @@ const STATUS_LABELS = {
 };
 
 const PosicoesFechadas = () => {
+  const { usuario } = useAuth();
+  const { isConsultor, podeVerTodasPosicoesFechadas } = usePermissions();
+  
   const [posicoesFechadas, setPosicoesFechadas] = useState<PosicaoFechada[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<PosicoesFechadasFilters>({});
   const [selectedPosicao, setSelectedPosicao] = useState<PosicaoFechada | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [processarModalOpen, setProcessarModalOpen] = useState(false);
   const [contratacaoModalOpen, setContratacaoModalOpen] = useState(false);
   const [posicaoParaContratacao, setPosicaoParaContratacao] = useState<PosicaoFechada | null>(null);
 
@@ -62,7 +63,13 @@ const PosicoesFechadas = () => {
   const loadPosicoesFechadas = async () => {
     setLoading(true);
     try {
-      const data = await PosicoesFechadasService.list(filters);
+      // Se for consultor e não tiver permissão para ver todas as posições, filtrar por consultor_id
+      const filtersToApply = { ...filters };
+      if (isConsultor() && !podeVerTodasPosicoesFechadas() && usuario?.id) {
+        filtersToApply.consultor_id = usuario.id;
+      }
+      
+      const data = await PosicoesFechadasService.list(filtersToApply);
       setPosicoesFechadas(data);
     } catch (error) {
       console.error('Erro ao carregar posições fechadas:', error);
@@ -84,7 +91,13 @@ const PosicoesFechadas = () => {
 
   const handleExportExcel = async () => {
     try {
-      await PosicoesFechadasService.exportToExcel(filters);
+      // Se for consultor e não tiver permissão para ver todas as posições, filtrar por consultor_id
+      const filtersToApply = { ...filters };
+      if (isConsultor() && !podeVerTodasPosicoesFechadas() && usuario?.id) {
+        filtersToApply.consultor_id = usuario.id;
+      }
+      
+      await PosicoesFechadasService.exportToExcel(filtersToApply);
       toast.success('Exportação realizada com sucesso!');
     } catch (error) {
       console.error('Erro na exportação:', error);
@@ -111,17 +124,6 @@ const PosicoesFechadas = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant="outline"
-              onClick={() => setProcessarModalOpen(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Processar Vagas
-            </Button>
-            <Button variant="outline">
-              <Filter className="mr-2 h-4 w-4" />
-              Filtrar
-            </Button>
             <Button 
               className="bg-gradient-primary hover:opacity-90"
               onClick={handleExportExcel}
@@ -311,12 +313,7 @@ const PosicoesFechadas = () => {
           onRefresh={loadPosicoesFechadas}
         />
 
-        {/* Modal de Processar Vagas */}
-        <ProcessarVagaModal
-          open={processarModalOpen}
-          onOpenChange={setProcessarModalOpen}
-          onSuccess={loadPosicoesFechadas}
-        />
+
 
         {/* Modal de Contratação */}
         <ContratacaoModal
