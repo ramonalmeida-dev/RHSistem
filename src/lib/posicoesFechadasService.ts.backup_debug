@@ -77,6 +77,7 @@ export interface PosicoesFechadasFilters {
 export class PosicoesFechadasService {
   static async list(filters?: PosicoesFechadasFilters): Promise<PosicaoFechada[]> {
     try {
+      console.log("Fazendo chamada para Edge Function...");
       // Usar a função RPC que verifica o status da vaga
       const { data, error } = await supabase.rpc('get_posicoes_fechadas', {
         p_consultor_id: filters?.consultor_id || null,
@@ -119,6 +120,7 @@ export class PosicoesFechadasService {
 
   static async getById(id: string): Promise<PosicaoFechada> {
     try {
+      console.log("Fazendo chamada para Edge Function...");
       const { data, error } = await supabase
         .from('posicoes_fechadas')
         .select('*')
@@ -128,6 +130,7 @@ export class PosicoesFechadasService {
       if (error) {
         throw error;
       }
+      console.log("Dados retornados pela Edge Function:", data);
       return data;
     } catch (error) {
       console.error('Erro ao buscar posição fechada:', error);
@@ -137,8 +140,8 @@ export class PosicoesFechadasService {
 
   static async processVaga(vagaId: string): Promise<string> {
     try {
-      
-      
+      console.log("Fazendo chamada para Edge Function...");
+      console.log("Chamando supabase.functions.invoke...");
       const { data, error } = await supabase.functions.invoke('posicoes-fechadas/process-vaga', {
         body: { vaga_id: vagaId }
       });
@@ -163,7 +166,7 @@ export class PosicoesFechadasService {
     observacoes?: string
   ): Promise<CurriculoAtualizado> {
     try {
-      
+      console.log("Fazendo chamada para Edge Function...");
       const formData = new FormData();
       formData.append('posicao_id', posicaoId);
       formData.append('candidato_id', candidatoId);
@@ -173,7 +176,7 @@ export class PosicoesFechadasService {
       if (regimeTrabalho) formData.append('regime_trabalho', regimeTrabalho);
       if (observacoes) formData.append('observacoes', observacoes);
 
-      
+      console.log("Chamando supabase.functions.invoke...");
       const { data, error } = await supabase.functions.invoke('posicoes-fechadas/upload-curriculo', {
         body: formData
       });
@@ -181,7 +184,7 @@ export class PosicoesFechadasService {
       if (error) {
         throw error;
       }
-      
+      console.log("Dados retornados pela Edge Function:", data);
       return data;
     } catch (error) {
       console.error('Erro ao fazer upload do currículo:', error);
@@ -191,7 +194,7 @@ export class PosicoesFechadasService {
 
   static async getCurriculosAtualizados(posicaoId: string): Promise<CurriculoAtualizado[]> {
     try {
-      
+      console.log("Fazendo chamada para Edge Function...");
       const { data, error } = await supabase
         .from('curriculos_atualizados')
         .select('*')
@@ -209,7 +212,7 @@ export class PosicoesFechadasService {
 
   static async deleteCurriculo(curriculoId: string): Promise<void> {
     try {
-      
+      console.log("Fazendo chamada para Edge Function...");
       const { error } = await supabase.functions.invoke('posicoes-fechadas/delete-curriculo', {
         body: { id: curriculoId }
       });
@@ -230,8 +233,8 @@ export class PosicoesFechadasService {
     destinatario: string
   ): Promise<string> {
     try {
-      
-      
+      console.log("Fazendo chamada para Edge Function...");
+      console.log("Chamando supabase.functions.invoke...");
       const { data, error } = await supabase.functions.invoke('posicoes-fechadas/enviar-email', {
         body: {
           posicao_id: posicaoId,
@@ -253,7 +256,7 @@ export class PosicoesFechadasService {
 
   static async getHistoricoEmails(posicaoId: string): Promise<HistoricoEmail[]> {
     try {
-      
+      console.log("Fazendo chamada para Edge Function...");
       const { data, error } = await supabase
         .from('historico_emails_posicoes')
         .select('*')
@@ -271,23 +274,26 @@ export class PosicoesFechadasService {
   }
 
   static async updateStatus(posicaoId: string, status: PosicaoFechada["status_posicao"]): Promise<PosicaoFechada> {
+    console.log("=== POSICOESFECHADASSERVICE.UPDATESTATUS ===");
+    console.log("posicaoId:", posicaoId);
+    console.log("status:", status);
     try {
-      // Usar chamada direta ao Supabase em vez da Edge Function
-      const { data, error } = await supabase
-        .from('posicoes_fechadas')
-        .update({ status_posicao: status })
-        .eq('id', posicaoId)
-        .select()
-        .single();
+      console.log("Fazendo chamada para Edge Function...");
+      console.log("Chamando supabase.functions.invoke...");
+      const { data, error } = await supabase.functions.invoke('posicoes-fechadas/update-status', {
+        body: {
+          id: posicaoId,
+          status_posicao: status
+        }
+      });
 
       if (error) {
-        console.error("Erro ao atualizar status no banco:", error);
         throw error;
       }
-      
+      console.log("Dados retornados pela Edge Function:", data);
       return data;
     } catch (error) {
-      console.error("Erro ao atualizar status:", error);
+      console.error('Erro ao atualizar status:', error);
       throw error;
     }
   }
@@ -301,7 +307,7 @@ export class PosicoesFechadasService {
     observacoes?: string
   ): Promise<string> {
     try {
-      
+      console.log("Fazendo chamada para Edge Function...");
       const { data, error } = await supabase.rpc('registrar_contratacao', {
         p_posicao_fechada_id: posicaoId,
         p_candidato_id: candidatoId,
@@ -314,7 +320,7 @@ export class PosicoesFechadasService {
       if (error) {
         throw error;
       }
-      
+      console.log("Dados retornados pela Edge Function:", data);
       return data;
     } catch (error) {
       console.error('Erro ao registrar contratação:', error);
@@ -324,7 +330,7 @@ export class PosicoesFechadasService {
 
   static async getContratacoes(posicaoId: string): Promise<Contratacao[]> {
     try {
-      
+      console.log("Fazendo chamada para Edge Function...");
       const { data, error } = await supabase
         .from('contratacoes')
         .select('*')
@@ -343,7 +349,7 @@ export class PosicoesFechadasService {
 
   static async exportToExcel(filters?: PosicoesFechadasFilters): Promise<void> {
     try {
-      
+      console.log("Fazendo chamada para Edge Function...");
       const { data, error } = await supabase.rpc('export_posicoes_fechadas_xlsx', {
         p_consultor_id: filters?.consultor_id || null,
         p_empresa_id: filters?.empresa_id || null,
@@ -366,7 +372,7 @@ export class PosicoesFechadasService {
 
   private static async generateXLSXFile(data: any): Promise<void> {
     try {
-      
+      console.log("Fazendo chamada para Edge Function...");
       // Criar workbook
       const workbook = XLSX.utils.book_new();
       

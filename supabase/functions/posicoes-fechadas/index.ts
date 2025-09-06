@@ -268,6 +268,7 @@ serve(async (req) => {
         break
 
       case 'PUT':
+      case 'POST':
         if (path === 'update-status') {
           const { id, status_posicao } = await req.json()
           if (!id || !status_posicao) {

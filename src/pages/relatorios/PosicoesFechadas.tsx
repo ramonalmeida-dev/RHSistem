@@ -105,6 +105,16 @@ const PosicoesFechadas = () => {
     }
   };
 
+
+  const handlePosicaoUpdate = (updatedPosicao: PosicaoFechada) => {
+    setSelectedPosicao(updatedPosicao);
+    setPosicoesFechadas(prev => 
+      prev.map(posicao => 
+        posicao.id === updatedPosicao.id ? updatedPosicao : posicao
+      )
+    );
+  };
+
   // Estatísticas
   const totalPosicoes = posicoesFechadas.length;
   const totalAprovados = posicoesFechadas.reduce((acc, p) => acc + p.candidatos_aprovados.length, 0);
@@ -311,7 +321,9 @@ const PosicoesFechadas = () => {
           open={modalOpen}
           onOpenChange={setModalOpen}
           onRefresh={loadPosicoesFechadas}
+          onStatusUpdate={handlePosicaoUpdate}
         />
+          
 
 
 

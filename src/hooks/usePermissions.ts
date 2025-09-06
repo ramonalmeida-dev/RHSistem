@@ -19,6 +19,7 @@ export const usePermissions = () => {
     podeEditarVagas: () => temPermissao('vagas_editar'),
     podeExcluirVagas: () => temPermissao('vagas_excluir'),
     podeGerenciarTodasVagas: () => temPermissao('vagas_gerenciar_todas'),
+    podeVerTodasVagas: () => temPermissao('vagas_gerenciar_todas'),
     
     podeVerCandidatos: () => temPermissao('candidatos_visualizar'),
     podeCriarCandidatos: () => temPermissao('candidatos_criar'),

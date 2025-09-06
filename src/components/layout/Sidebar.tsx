@@ -23,7 +23,8 @@ import {
   Search,
   Calendar,
   DollarSign,
-  Shield
+  Shield,
+  FileText
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -71,6 +72,12 @@ const mainNavItems: NavItem[] = [
 ];
 
 const reportNavItems: NavItem[] = [
+  {
+    title: "Status de Vagas",
+    href: "/relatorios/status-vagas",
+    icon: FileText,
+    permissao: "relatorios_visualizar",
+  },
   {
     title: "Posições Fechadas",
     href: "/relatorios/posicoes-fechadas",

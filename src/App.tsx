@@ -13,6 +13,7 @@ import Consultores from "./pages/Consultores";
 import GerenciarPermissoes from "./pages/GerenciarPermissoes";
 import Vagas from "./pages/Vagas";
 import Curriculos from "./pages/Curriculos";
+import StatusVagas from "./pages/relatorios/StatusVagas";
 import PosicoesFechadas from "./pages/relatorios/PosicoesFechadas";
 import Financeiro from "./pages/relatorios/Financeiro";
 import VagaPublica from "./pages/VagaPublica";
@@ -78,6 +79,12 @@ const App = () => (
               } />
               
               {/* Relatórios - apenas consultores e admins */}
+              <Route path="/relatorios/status-vagas" element={
+                <ProtectedRoute>
+                  <StatusVagas />
+                </ProtectedRoute>
+              } />
+              
               <Route path="/relatorios/posicoes-fechadas" element={
                 <ProtectedRoute>
                   <PosicoesFechadas />

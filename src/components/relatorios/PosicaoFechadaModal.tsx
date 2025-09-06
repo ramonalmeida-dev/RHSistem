@@ -19,9 +19,10 @@ interface PosicaoFechadaModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRefresh: () => void;
+  onStatusUpdate?: (updatedPosicao: PosicaoFechada) => void;
 }
 
-export const PosicaoFechadaModal = ({ posicao, open, onOpenChange, onRefresh }: PosicaoFechadaModalProps) => {
+export const PosicaoFechadaModal = ({ posicao, open, onOpenChange, onRefresh, onStatusUpdate }: PosicaoFechadaModalProps) => {
   const [curriculosAtualizados, setCurriculosAtualizados] = useState<CurriculoAtualizado[]>([]);
   const [historicoEmails, setHistoricoEmails] = useState<HistoricoEmail[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,6 +63,13 @@ export const PosicaoFechadaModal = ({ posicao, open, onOpenChange, onRefresh }: 
     onRefresh();
   };
 
+  const handleStatusUpdate = (updatedPosicao: PosicaoFechada) => {
+    if (onStatusUpdate) {
+      onStatusUpdate(updatedPosicao);
+    }
+    handleRefresh();
+  };
+
   if (!posicao) return null;
 
   return (
@@ -84,9 +92,10 @@ export const PosicaoFechadaModal = ({ posicao, open, onOpenChange, onRefresh }: 
           ) : (
             // Visualização completa para vagas em processo
             <>
-              <InformacoesVaga 
-                posicao={posicao} 
+              <InformacoesVaga
+                posicao={posicao}
                 onRefresh={handleRefresh}
+                onStatusUpdate={handleStatusUpdate}
               />
 
               <CandidatosAprovados 

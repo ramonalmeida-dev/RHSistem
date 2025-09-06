@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,7 @@ import { PosicoesFechadasService } from "@/lib/posicoesFechadasService";
 interface InformacoesVagaProps {
   posicao: PosicaoFechada;
   onRefresh: () => void;
+  onStatusUpdate?: (updatedPosicao: PosicaoFechada) => void;
 }
 
 const STATUS_COLORS = {
@@ -29,15 +31,30 @@ const STATUS_LABELS = {
   desistiu: "Desistiu"
 };
 
-export const InformacoesVaga = ({ posicao, onRefresh }: InformacoesVagaProps) => {
-  const handleUpdateStatus = async (newStatus: PosicaoFechada['status_posicao']) => {
+export const InformacoesVaga = ({ posicao, onRefresh, onStatusUpdate }: InformacoesVagaProps) => {
+  const [currentStatus, setCurrentStatus] = useState<PosicaoFechada["status_posicao"]>(posicao.status_posicao);
+
+  useEffect(() => {
+    setCurrentStatus(posicao.status_posicao);
+  }, [posicao.status_posicao]);
+
+  const handleUpdateStatus = async (newStatus: PosicaoFechada["status_posicao"]) => {
     try {
-      await PosicoesFechadasService.updateStatus(posicao.id, newStatus);
-      toast.success('Status atualizado com sucesso!');
-      onRefresh();
+      const updatedPosicao = await PosicoesFechadasService.updateStatus(posicao.id, newStatus);
+      
+      // Atualizar o estado local imediatamente
+      setCurrentStatus(newStatus);
+      
+      toast.success("Status atualizado com sucesso!");
+      
+      if (onStatusUpdate) {
+        onStatusUpdate(updatedPosicao);
+      } else {
+        onRefresh();
+      }
     } catch (error) {
-      console.error('Erro ao atualizar status:', error);
-      toast.error('Erro ao atualizar status');
+      console.error("Erro ao atualizar status:", error);
+      toast.error("Erro ao atualizar status");
     }
   };
 
@@ -46,8 +63,8 @@ export const InformacoesVaga = ({ posicao, onRefresh }: InformacoesVagaProps) =>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Informações da Vaga</span>
-          <Badge className={STATUS_COLORS[posicao.status_posicao]}>
-            {STATUS_LABELS[posicao.status_posicao]}
+          <Badge className={STATUS_COLORS[currentStatus]}>
+            {STATUS_LABELS[currentStatus]}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -75,7 +92,7 @@ export const InformacoesVaga = ({ posicao, onRefresh }: InformacoesVagaProps) =>
 
         <div className="space-y-2">
           <div className="flex gap-2">
-            <Select value={posicao.status_posicao} onValueChange={handleUpdateStatus}>
+            <Select value={currentStatus} onValueChange={handleUpdateStatus}>
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>
@@ -88,10 +105,7 @@ export const InformacoesVaga = ({ posicao, onRefresh }: InformacoesVagaProps) =>
                 <SelectItem value="desistiu">Desistiu</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            <strong>Fluxo:</strong> Em Análise → Em Entrevista → Em Entrevista Final → Aprovado → Contratado
-          </p>
+          </div>          
         </div>
       </CardContent>
     </Card>

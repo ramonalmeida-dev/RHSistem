@@ -114,3 +114,22 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   const bcrypt = await import('https://deno.land/x/bcrypt@v0.4.1/mod.ts');
   return await bcrypt.compare(password, hash);
 } 
+// Middleware de autenticação para Edge Functions
+export async function authMiddleware(req: Request): Promise<{ success: boolean; error?: string; user?: any }> {
+  try {
+    const token = extractToken(req);
+    if (!token) {
+      return { success: false, error: 'Token de autorização não fornecido' };
+    }
+
+    const authResult = await authenticateRequest(req);
+    if (!authResult) {
+      return { success: false, error: 'Token inválido ou expirado' };
+    }
+
+    return { success: true, user: authResult };
+  } catch (error) {
+    console.error('Erro no middleware de autenticação:', error);
+    return { success: false, error: 'Erro interno de autenticação' };
+  }
+}
