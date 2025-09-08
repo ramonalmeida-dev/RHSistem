@@ -6,6 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { 
   Search, 
   Plus, 
   MoreHorizontal, 
@@ -141,6 +151,8 @@ const Vagas = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [isEncerrarModalOpen, setIsEncerrarModalOpen] = useState(false);
+  const [vagaToEncerrar, setVagaToEncerrar] = useState<Vaga | null>(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [empresaFilter, setEmpresaFilter] = useState<string>('todas');
   const [consultorFilter, setConsultorFilter] = useState<string>('todos');
@@ -489,10 +501,36 @@ const Vagas = () => {
   };
 
   const handleChangeStatus = async (vaga: Vaga, newStatus: string) => {
+    // Validações de regras de negócio
+    if (vaga.status === 'encerrada' && newStatus === 'publicada') {
+      toast({
+        title: "Ação não permitida",
+        description: "Não é possível publicar uma vaga encerrada. Vagas encerradas são definitivas.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newStatus === 'publicada' && !['rascunho', 'pausada', 'em_analise'].includes(vaga.status)) {
+      toast({
+        title: "Ação não permitida",
+        description: `Não é possível publicar vaga com status '${vaga.status}'. Apenas vagas em rascunho, pausadas ou em análise podem ser publicadas.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      const updateData: any = { status: newStatus };
+      
+      // Se estiver encerrando a vaga, definir data de encerramento
+      if (newStatus === 'encerrada' && !vaga.data_encerramento) {
+        updateData.data_encerramento = new Date().toISOString().split('T')[0];
+      }
+
       const { data, error } = await supabase
         .from('vagas')
-        .update({ status: newStatus })
+        .update(updateData)
         .eq('id', vaga.id)
         .select(`
           *,
@@ -505,9 +543,17 @@ const Vagas = () => {
 
       setVagas(prev => prev.map(v => v.id === vaga.id ? data : v));
       
+      const statusLabels: Record<string, string> = {
+        'rascunho': 'Rascunho',
+        'publicada': 'Publicada',
+        'pausada': 'Pausada',
+        'em_analise': 'Em Análise',
+        'encerrada': 'Encerrada'
+      };
+      
       toast({
         title: "Sucesso",
-        description: `Status da vaga alterado para ${newStatus}`,
+        description: `Status da vaga alterado para ${statusLabels[newStatus] || newStatus}`,
       });
     } catch (error) {
       console.error('Erro ao alterar status:', error);
@@ -517,6 +563,24 @@ const Vagas = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleEncerrarVaga = (vaga: Vaga) => {
+    setVagaToEncerrar(vaga);
+    setIsEncerrarModalOpen(true);
+  };
+
+  const confirmEncerrarVaga = async () => {
+    if (!vagaToEncerrar) return;
+    
+    await handleChangeStatus(vagaToEncerrar, 'encerrada');
+    setIsEncerrarModalOpen(false);
+    setVagaToEncerrar(null);
+  };
+
+  const cancelEncerrarVaga = () => {
+    setIsEncerrarModalOpen(false);
+    setVagaToEncerrar(null);
   };
 
   const handleDeleteVaga = async (vaga: Vaga) => {
@@ -963,28 +1027,34 @@ const Vagas = () => {
                                       </DropdownMenuItem>
                                     )}
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem 
-                                      onClick={() => handleChangeStatus(vaga, vaga.status === 'publicada' ? 'pausada' : 'publicada')}
-                                    >
-                                      {vaga.status === 'publicada' ? (
-                                        <>
-                                          <Pause className="mr-2 h-4 w-4" />
-                                          Pausar Vaga
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Play className="mr-2 h-4 w-4" />
-                                          Publicar Vaga
-                                        </>
-                                      )}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem 
-                                      onClick={() => handleChangeStatus(vaga, 'encerrada')}
-                                      className="text-warning"
-                                    >
-                                      <XCircle className="mr-2 h-4 w-4" />
-                                      Encerrar Vaga
-                                    </DropdownMenuItem>
+                                    {/* Ação Pausar - só mostra se estiver publicada */}
+                                    {vaga.status === 'publicada' && (
+                                      <DropdownMenuItem 
+                                        onClick={() => handleChangeStatus(vaga, 'pausada')}
+                                      >
+                                        <Pause className="mr-2 h-4 w-4" />
+                                        Pausar Vaga
+                                      </DropdownMenuItem>
+                                    )}
+                                    {/* Ação Publicar - só mostra se estiver pausada, rascunho ou em_analise */}
+                                    {['pausada', 'rascunho', 'em_analise'].includes(vaga.status) && (
+                                      <DropdownMenuItem 
+                                        onClick={() => handleChangeStatus(vaga, 'publicada')}
+                                      >
+                                        <Play className="mr-2 h-4 w-4" />
+                                        Publicar Vaga
+                                      </DropdownMenuItem>
+                                    )}
+                                    {/* Ação Encerrar - só mostra se não estiver encerrada */}
+                                    {vaga.status !== 'encerrada' && (
+                                      <DropdownMenuItem 
+                                        onClick={() => handleEncerrarVaga(vaga)}
+                                        className="text-warning"
+                                      >
+                                        <XCircle className="mr-2 h-4 w-4" />
+                                        Encerrar Vaga
+                                      </DropdownMenuItem>
+                                    )}
                                     <PermissionGuard permissao="vagas_excluir">
                                       <DropdownMenuItem 
                                         onClick={() => handleDeleteVaga(vaga)}
@@ -1108,6 +1178,35 @@ const Vagas = () => {
           vagaCargo={selectedVaga?.cargo}
           vagaEmpresa={selectedVaga?.empresa?.razao_social}
         />
+
+        {/* Modal de Confirmação para Encerrar Vaga */}
+        <AlertDialog open={isEncerrarModalOpen} onOpenChange={setIsEncerrarModalOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Encerramento</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja encerrar a vaga <strong>{vagaToEncerrar?.numero_vaga}</strong> - <strong>{vagaToEncerrar?.cargo}</strong>?
+                <br /><br />
+                <span className="text-red-600 font-medium">
+                  ⚠️ Após encerrada, a vaga não poderá mais receber candidaturas e não será possível publicá-la novamente.
+                </span>
+                <br />
+                Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={cancelEncerrarVaga}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={confirmEncerrarVaga}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Sim, Encerrar Vaga
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );

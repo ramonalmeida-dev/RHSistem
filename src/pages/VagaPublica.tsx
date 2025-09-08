@@ -116,7 +116,29 @@ const VagaPublica: React.FC = () => {
         return;
       }
 
-      setVaga(data.vaga);
+      const vagaData = data.vaga;
+      
+      // Verificar se a vaga está disponível para candidaturas
+      if (vagaData.status !== 'publicada') {
+        const statusMessages: Record<string, string> = {
+          'pausada': 'Esta vaga está temporariamente pausada e não está recebendo candidaturas no momento.',
+          'encerrada': 'Esta vaga foi encerrada e não está mais recebendo candidaturas.',
+          'rascunho': 'Esta vaga ainda não foi publicada.',
+          'em_analise': 'Esta vaga está em análise e não está recebendo candidaturas no momento.'
+        };
+        
+        toast({
+          title: "Vaga não disponível",
+          description: statusMessages[vagaData.status] || "Esta vaga não está disponível para candidaturas.",
+          variant: "destructive",
+        });
+        
+        // Definir vaga mesmo assim para mostrar informações, mas desabilitar candidatura
+        setVaga({ ...vagaData, candidaturaDisponivel: false });
+        return;
+      }
+
+      setVaga({ ...vagaData, candidaturaDisponivel: true });
       
       // Definir questionário se existir
       if (data.questionario) {
@@ -705,35 +727,74 @@ const VagaPublica: React.FC = () => {
                               </p>
                             </div>
                           ) : isAuthenticated ? (
-                            <div className="space-y-4">
-                              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                <p className="text-sm text-blue-800">
-                                  Olá, <strong>{candidato?.nome}</strong>! 
+                            vaga?.candidaturaDisponivel === false ? (
+                              <div className="text-center py-6">
+                                <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                  <XCircle className="h-8 w-8 text-red-600" />
+                                </div>
+                                <h4 className="text-lg font-bold text-red-800 mb-2">
+                                  Candidaturas Indisponíveis
+                                </h4>
+                                <p className="text-red-700 mb-2">
+                                  Esta vaga não está recebendo candidaturas no momento.
                                 </p>
-                              </div>
-                              
-                              <p className="text-emerald-700">
-                                Revise todos os detalhes da vaga acima e clique no botão abaixo para iniciar sua candidatura.
-                              </p>
-                              <Button 
-                                onClick={handleIniciarCandidatura}
-                                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-                                size="lg"
-                              >
-                                <ArrowRight className="h-4 w-4 mr-2" />
-                                Candidatar-se para esta Vaga
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              <div className="text-center py-4">
-                                <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                <h4 className="font-bold text-gray-900 mb-2">Entre ou cadastre-se</h4>
                                 <p className="text-sm text-gray-600">
-                                  Para se candidatar a esta vaga, você precisa fazer login ou criar uma conta.
+                                  {vaga?.status === 'pausada' && 'A vaga está temporariamente pausada.'}
+                                  {vaga?.status === 'encerrada' && 'A vaga foi encerrada.'}
+                                  {vaga?.status === 'rascunho' && 'A vaga ainda não foi publicada.'}
+                                  {vaga?.status === 'em_analise' && 'A vaga está em análise.'}
                                 </p>
                               </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            ) : (
+                              <div className="space-y-4">
+                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                  <p className="text-sm text-blue-800">
+                                    Olá, <strong>{candidato?.nome}</strong>! 
+                                  </p>
+                                </div>
+                                
+                                <p className="text-emerald-700">
+                                  Revise todos os detalhes da vaga acima e clique no botão abaixo para iniciar sua candidatura.
+                                </p>
+                                <Button 
+                                  onClick={handleIniciarCandidatura}
+                                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                                  size="lg"
+                                >
+                                  <ArrowRight className="h-4 w-4 mr-2" />
+                                  Candidatar-se para esta Vaga
+                                </Button>
+                              </div>
+                            )
+                          ) : (
+                            vaga?.candidaturaDisponivel === false ? (
+                              <div className="text-center py-6">
+                                <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                  <XCircle className="h-8 w-8 text-red-600" />
+                                </div>
+                                <h4 className="text-lg font-bold text-red-800 mb-2">
+                                  Candidaturas Indisponíveis
+                                </h4>
+                                <p className="text-red-700 mb-2">
+                                  Esta vaga não está recebendo candidaturas no momento.
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {vaga?.status === 'pausada' && 'A vaga está temporariamente pausada.'}
+                                  {vaga?.status === 'encerrada' && 'A vaga foi encerrada.'}
+                                  {vaga?.status === 'rascunho' && 'A vaga ainda não foi publicada.'}
+                                  {vaga?.status === 'em_analise' && 'A vaga está em análise.'}
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="space-y-4">
+                                <div className="text-center py-4">
+                                  <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                  <h4 className="font-bold text-gray-900 mb-2">Entre ou cadastre-se</h4>
+                                  <p className="text-sm text-gray-600">
+                                    Para se candidatar a esta vaga, você precisa fazer login ou criar uma conta.
+                                  </p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <Button 
                                   onClick={handleLogin} 
                                   className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
@@ -750,7 +811,8 @@ const VagaPublica: React.FC = () => {
                                   Criar Conta
                                 </Button>
                               </div>
-                            </div>
+                              </div>
+                            )
                           )}
                         </>
                       ) : (
