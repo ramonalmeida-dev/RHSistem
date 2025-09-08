@@ -32,20 +32,26 @@ import { ptBR } from "date-fns/locale";
 
 const STATUS_COLORS = {
   AGUARDANDO: "bg-yellow-100 text-yellow-800",
-  REPROVADO: "bg-red-100 text-red-800",
-  DECLINOU: "bg-gray-100 text-gray-800",
-  AGENDAR: "bg-blue-100 text-blue-800",
+  NAO_APROVADO: "bg-red-100 text-red-800",
+  DESISTIU: "bg-gray-100 text-gray-800",
+  EM_ENTREVISTA: "bg-purple-100 text-purple-800",
+  FASE_FINAL: "bg-indigo-100 text-indigo-800",
   APROVADO: "bg-green-100 text-green-800",
-  CONTRATADO: "bg-emerald-100 text-emerald-800"
+  ADMITIDO: "bg-emerald-100 text-emerald-800",
+  SUSPENSA: "bg-pink-100 text-pink-800",
+  CANCELADA: "bg-slate-100 text-slate-800"
 };
 
 const STATUS_LABELS = {
   AGUARDANDO: "Aguardando",
-  REPROVADO: "Reprovado",
-  DECLINOU: "Declinou",
-  AGENDAR: "Agendar",
+  NAO_APROVADO: "Não Aprovado",
+  DESISTIU: "Desistiu",
+  EM_ENTREVISTA: "Em Entrevista",
+  FASE_FINAL: "Fase Final",
   APROVADO: "Aprovado",
-  CONTRATADO: "Contratado"
+  ADMITIDO: "Admitido",
+  SUSPENSA: "Suspensa",
+  CANCELADA: "Cancelada"
 };
 
 export default function StatusVagas() {
@@ -200,8 +206,8 @@ export default function StatusVagas() {
   const totalAguardando = vagasStatus.reduce((acc, vaga) => 
     acc + vaga.candidatos.filter(c => c.status === 'AGUARDANDO').length, 0
   );
-  const totalReprovados = vagasStatus.reduce((acc, vaga) => 
-    acc + vaga.candidatos.filter(c => c.status === 'REPROVADO').length, 0
+  const totalNaoAprovados = vagasStatus.reduce((acc, vaga) => 
+    acc + vaga.candidatos.filter(c => c.status === 'NAO_APROVADO').length, 0
   );
   const totalAprovados = vagasStatus.reduce((acc, vaga) => 
     acc + vaga.candidatos.filter(c => c.status === 'APROVADO').length, 0
@@ -362,8 +368,8 @@ export default function StatusVagas() {
               <div className="flex items-center space-x-2">
                 <XCircle className="h-4 w-4 text-red-600" />
                 <div>
-                  <p className="text-sm font-medium">Reprovados</p>
-                  <p className="text-2xl font-bold">{totalReprovados}</p>
+                  <p className="text-sm font-medium">Não Aprovados</p>
+                  <p className="text-2xl font-bold">{totalNaoAprovados}</p>
                 </div>
               </div>
             </CardContent>
@@ -418,12 +424,18 @@ export default function StatusVagas() {
                           <div>
                             <h3 className="font-semibold text-lg">{vaga.empresa_nome}</h3>
                             <p className="text-muted-foreground">{vaga.cargo}</p>
+                            {vaga.salario && (
+                              <p className="text-sm text-green-600 font-medium">💰 {vaga.salario}</p>
+                            )}
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                           <div>
                             <span className="font-medium">Vaga:</span> #{vaga.numero_vaga}
+                          </div>
+                          <div>
+                            <span className="font-medium">Consultor:</span> {vaga.consultor_nome}
                           </div>
                           <div>
                             <span className="font-medium">Duração:</span> {vaga.dias_processo} dias

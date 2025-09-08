@@ -7,7 +7,9 @@ export interface CandidatoStatusVaga {
   nome: string;
   codigo: string; // Código do candidato (ex: LRFR2013_08)
   data_envio: string;
-  status: 'AGUARDANDO' | 'REPROVADO' | 'DECLINOU' | 'AGENDAR' | 'APROVADO' | 'CONTRATADO';
+  status: 'AGUARDANDO' | 'EM_ENTREVISTA' | 'FASE_FINAL' | 'APROVADO' | 'NAO_APROVADO' | 'DESISTIU' | 'ADMITIDO' | 'SUSPENSA' | 'CANCELADA';
+  data_status: string; // Data específica do status atual
+  dias_no_status: number; // Dias desde a mudança para este status
   data_entrevista?: string;
   hora_entrevista?: string;
 }
@@ -17,6 +19,8 @@ export interface VagaStatusRelatorio {
   numero_vaga: string;
   empresa_nome: string;
   cargo: string;
+  consultor_nome: string; // Novo campo
+  salario?: string; // Novo campo
   data_inicio: string;
   data_primeira_remessa: string;
   dias_processo: number;
@@ -26,6 +30,7 @@ export interface VagaStatusRelatorio {
 
 export interface StatusVagasRelatorio {
   data_relatorio: string;
+  data_emissao: string; // Novo campo para cabeçalho
   empresa_nome: string;
   vagas: VagaStatusRelatorio[];
 }
@@ -48,6 +53,7 @@ export class StatusVagasService {
           id,
           numero_vaga,
           cargo,
+          salario,
           data_inicio_selecao,
           data_envio_curriculos,
           empresa:clientes(id, razao_social),
@@ -103,16 +109,23 @@ export class StatusVagasService {
               console.error('Erro ao buscar candidatos:', candidatosError);
             }
 
-            // Formatar candidatos (ou criar array vazio se não houver)
-            const candidatos: CandidatoStatusVaga[] = (candidatosData || []).map((cv: any) => ({
-              id: cv.id,
-              nome: cv.candidatos?.nome || `Candidato ${cv.candidato_id?.slice(0, 8) || 'N/A'}`,
-              codigo: this.generateCandidateCode(cv.data_candidatura, cv.id),
-              data_envio: cv.data_candidatura || new Date().toISOString(),
-              status: this.mapStatusToRelatorio(cv.status_atual),
-              data_entrevista: this.extractDateFromObservacoes(cv.observacoes),
-              hora_entrevista: this.extractTimeFromObservacoes(cv.observacoes)
-            }));
+            // Formatar candidatos com busca de histórico de status
+            const candidatos: CandidatoStatusVaga[] = await Promise.all(
+              (candidatosData || []).map(async (cv: any) => {
+                const statusInfo = await StatusVagasService.getStatusInfo(cv.id, cv.status_atual);
+                return {
+                  id: cv.id,
+                  nome: cv.candidatos?.nome || `Candidato ${cv.candidato_id?.slice(0, 8) || 'N/A'}`,
+                  codigo: this.generateCandidateCode(cv.data_candidatura, cv.id),
+                  data_envio: cv.data_candidatura || new Date().toISOString(),
+                  status: this.mapStatusToRelatorio(cv.status_atual),
+                  data_status: statusInfo.data_status,
+                  dias_no_status: statusInfo.dias_no_status,
+                  data_entrevista: this.extractDateFromObservacoes(cv.observacoes),
+                  hora_entrevista: this.extractTimeFromObservacoes(cv.observacoes)
+                };
+              })
+            );
 
             const dataInicio = vaga.data_inicio_selecao || vaga.data_envio_curriculos || new Date().toISOString();
             const dataPrimeiraRemessa = vaga.data_envio_curriculos || vaga.data_inicio_selecao || new Date().toISOString();
@@ -123,6 +136,8 @@ export class StatusVagasService {
               numero_vaga: vaga.numero_vaga,
               empresa_nome: (vaga.empresa as any)?.razao_social || 'N/A',
               cargo: vaga.cargo,
+              consultor_nome: (vaga.consultor as any)?.nome || 'N/A',
+              salario: (vaga as any).salario,
               data_inicio: dataInicio,
               data_primeira_remessa: dataPrimeiraRemessa,
               dias_processo: diasProcesso,
@@ -141,6 +156,8 @@ export class StatusVagasService {
               numero_vaga: vaga.numero_vaga,
               empresa_nome: (vaga.empresa as any)?.razao_social || 'N/A',
               cargo: vaga.cargo,
+              consultor_nome: (vaga.consultor as any)?.nome || 'N/A',
+              salario: (vaga as any).salario,
               data_inicio: dataInicio,
               data_primeira_remessa: dataPrimeiraRemessa,
               dias_processo: diasProcesso,
@@ -158,17 +175,61 @@ export class StatusVagasService {
     }
   }
 
+  private static async getStatusInfo(candidatoVagaId: string, statusAtual: string): Promise<{data_status: string, dias_no_status: number}> {
+    try {
+      // Buscar o último registro de mudança de status para este status atual
+      const { data: historico, error } = await supabase
+        .from('historico_status')
+        .select('created_at')
+        .eq('candidato_vaga_id', candidatoVagaId)
+        .eq('status_novo', statusAtual)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Erro ao buscar histórico de status:', error);
+      }
+
+      let dataStatus: string;
+      if (historico && historico.length > 0) {
+        dataStatus = historico[0].created_at;
+      } else {
+        // Se não há histórico, usar data de candidatura ou data atual
+        const { data: candidatoVaga } = await supabase
+          .from('candidatos_vagas')
+          .select('data_candidatura')
+          .eq('id', candidatoVagaId)
+          .single();
+        
+        dataStatus = candidatoVaga?.data_candidatura || new Date().toISOString();
+      }
+
+      const diasNoStatus = differenceInDays(new Date(), parseISO(dataStatus));
+      
+      return {
+        data_status: dataStatus,
+        dias_no_status: Math.max(0, diasNoStatus)
+      };
+    } catch (error) {
+      console.error('Erro ao obter informações de status:', error);
+      return {
+        data_status: new Date().toISOString(),
+        dias_no_status: 0
+      };
+    }
+  }
+
   private static mapStatusToRelatorio(status: string): CandidatoStatusVaga['status'] {
     if (!status) return 'AGUARDANDO';
     
     const statusMap: Record<string, CandidatoStatusVaga['status']> = {
       'selecionando': 'AGUARDANDO',
       'curriculo_enviado': 'AGUARDANDO', 
-      'entrevista_agendada': 'AGENDAR',
-      'entrevista_realizada': 'AGUARDANDO',
+      'entrevista_agendada': 'EM_ENTREVISTA',
+      'entrevista_realizada': 'FASE_FINAL',
       'aprovado': 'APROVADO',
-      'reprovado': 'REPROVADO',
-      'desistiu': 'DECLINOU'
+      'reprovado': 'NAO_APROVADO',
+      'desistiu': 'DESISTIU'
     };
 
     return statusMap[status] || 'AGUARDANDO';
@@ -264,6 +325,11 @@ export class StatusVagasService {
               font-size: 14px; 
               margin-bottom: 20px;
             }
+            .emission-date {
+              font-size: 12px;
+              color: #666;
+              margin-bottom: 20px;
+            }
             .intro { 
               margin-bottom: 30px; 
               text-align: justify;
@@ -302,28 +368,43 @@ export class StatusVagasService {
               font-size: 9px;
               line-height: 1.2;
             }
-            .status-reprovado { background-color: #ffebee; color: #c62828; font-weight: bold; }
+            .status-nao-aprovado { background-color: #ffebee; color: #c62828; font-weight: bold; }
             .status-aprovado { background-color: #e8f5e8; color: #2e7d32; font-weight: bold; }
             .status-aguardando { background-color: #fff3e0; color: #f57c00; font-weight: bold; }
-            .status-declinou { background-color: #e3f2fd; color: #1565c0; font-weight: bold; }
-            .status-agendar { background-color: #f3e5f5; color: #7b1fa2; font-weight: bold; }
-            .status-contratado { background-color: #e0f2f1; color: #00695c; font-weight: bold; }
+            .status-desistiu { background-color: #e3f2fd; color: #1565c0; font-weight: bold; }
+            .status-em-entrevista { background-color: #f3e5f5; color: #7b1fa2; font-weight: bold; }
+            .status-fase-final { background-color: #e8eaf6; color: #3f51b5; font-weight: bold; }
+            .status-admitido { background-color: #e0f2f1; color: #00695c; font-weight: bold; }
+            .status-suspensa { background-color: #fce4ec; color: #e91e63; font-weight: bold; }
+            .status-cancelada { background-color: #f5f5f5; color: #424242; font-weight: bold; }
             .vaga-row { background-color: #f8f9fa; font-weight: bold; }
             .candidato-row { background-color: white; }
             .empty-cell { color: #999; font-style: italic; text-align: center; }
             .candidato-nome { text-align: center; font-weight: 500; }
             .status-cell { text-align: center; font-weight: bold; }
-            .empresa-col { width: 15%; text-align: center; }
-            .cargo-col { width: 18%; text-align: center; }
-            .vaga-col { width: 8%; text-align: center; }
-            .data-col { width: 8%; text-align: center; }
-            .dias-col { width: 6%; text-align: center; }
-            .num-enviados-col { width: 8%; text-align: center; }
-            .candidato-col { width: 20%; text-align: center; }
-            .status-col { width: 17%; text-align: center; }
+            .empresa-col { width: 12%; text-align: center; }
+            .cargo-col { width: 14%; text-align: center; }
+            .consultor-col { width: 10%; text-align: center; }
+            .salario-col { width: 8%; text-align: center; }
+            .vaga-col { width: 6%; text-align: center; }
+            .data-col { width: 6%; text-align: center; }
+            .dias-col { width: 5%; text-align: center; }
+            .num-enviados-col { width: 6%; text-align: center; }
+            .candidato-col { width: 12%; text-align: center; }
+            .status-col { width: 8%; text-align: center; }
+            .data-status-col { width: 6%; text-align: center; }
+            .dias-status-col { width: 5%; text-align: center; }
           </style>
         </head>
         <body>
+          <div class="header">
+            <div class="title">RELATÓRIO DE STATUS DE VAGAS</div>
+            <div class="date">Data de Emissão: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</div>
+            <div class="intro">
+              Relatório detalhado do status dos processos seletivos em andamento, 
+              incluindo informações sobre candidatos, consultores responsáveis e tempo de permanência em cada etapa.
+            </div>
+          </div>
       `;
 
       // Para cada empresa
@@ -336,9 +417,10 @@ export class StatusVagasService {
                 <tr>
                   <th rowspan="2" class="empresa-col">EMPRESA</th>
                   <th rowspan="2" class="cargo-col">CARGO</th>
+                  <th rowspan="2" class="consultor-col">CONSULTOR</th>
+                  <th rowspan="2" class="salario-col">SALÁRIO</th>
                   <th colspan="4">DURAÇÃO DO PROCESSO</th>
-                  <th colspan="2">CANDIDATOS ENVIADOS</th>
-                  <th rowspan="2" class="status-col">STATUS</th>
+                  <th colspan="4">CANDIDATOS ENVIADOS</th>
                 </tr>
                 <tr>
                   <th class="vaga-col">Nº VAGA</th>
@@ -347,6 +429,9 @@ export class StatusVagasService {
                   <th class="dias-col">Nº DIAS</th>
                   <th class="num-enviados-col">Nº ENVIADOS</th>
                   <th class="candidato-col">CANDIDATO</th>
+                  <th class="status-col">STATUS</th>
+                  <th class="data-status-col">DATA STATUS</th>
+                  <th class="dias-status-col">DIAS STATUS</th>
                 </tr>
               </thead>
               <tbody>
@@ -364,6 +449,8 @@ export class StatusVagasService {
                 <tr class="${isFirstRow ? 'vaga-row' : 'candidato-row'}">
                   <td class="empresa-col">${isFirstRow ? empresa : ''}</td>
                   <td class="cargo-col">${isFirstRow ? vaga.cargo : ''}</td>
+                  <td class="consultor-col">${isFirstRow ? vaga.consultor_nome : ''}</td>
+                  <td class="salario-col">${isFirstRow ? (vaga.salario || '-') : ''}</td>
                   <td class="vaga-col">${isFirstRow ? vaga.numero_vaga : ''}</td>
                   <td class="data-col">${isFirstRow ? this.formatDate(vaga.data_inicio) : ''}</td>
                   <td class="data-col">${isFirstRow ? this.formatDate(vaga.data_primeira_remessa) : ''}</td>
@@ -371,6 +458,8 @@ export class StatusVagasService {
                   <td class="num-enviados-col">${isFirstRow ? vaga.total_candidatos_enviados : ''}</td>
                   <td class="candidato-col candidato-nome">${candidato.nome}</td>
                   <td class="status-col status-cell ${statusClass}">${candidato.status}</td>
+                  <td class="data-status-col">${this.formatDate(candidato.data_status)}</td>
+                  <td class="dias-status-col">${candidato.dias_no_status}</td>
                 </tr>
               `;
             });
@@ -380,6 +469,8 @@ export class StatusVagasService {
               <tr class="vaga-row">
                 <td class="empresa-col">${empresa}</td>
                 <td class="cargo-col">${vaga.cargo}</td>
+                <td class="consultor-col">${vaga.consultor_nome}</td>
+                <td class="salario-col">${vaga.salario || '-'}</td>
                 <td class="vaga-col">${vaga.numero_vaga}</td>
                 <td class="data-col">${this.formatDate(vaga.data_inicio)}</td>
                 <td class="data-col">${this.formatDate(vaga.data_primeira_remessa)}</td>
@@ -387,6 +478,8 @@ export class StatusVagasService {
                 <td class="num-enviados-col">${vaga.total_candidatos_enviados}</td>
                 <td class="candidato-col empty-cell">Nenhum candidato</td>
                 <td class="status-col"></td>
+                <td class="data-status-col"></td>
+                <td class="dias-status-col"></td>
               </tr>
             `;
           }
@@ -433,12 +526,15 @@ export class StatusVagasService {
   // Funções auxiliares
   private static getStatusClass(status: string): string {
     switch (status) {
-      case 'REPROVADO': return 'status-reprovado';
+      case 'NAO_APROVADO': return 'status-nao-aprovado';
       case 'APROVADO': return 'status-aprovado';
       case 'AGUARDANDO': return 'status-aguardando';
-      case 'DECLINOU': return 'status-declinou';
-      case 'AGENDAR': return 'status-agendar';
-      case 'CONTRATADO': return 'status-contratado';
+      case 'DESISTIU': return 'status-desistiu';
+      case 'EM_ENTREVISTA': return 'status-em-entrevista';
+      case 'FASE_FINAL': return 'status-fase-final';
+      case 'ADMITIDO': return 'status-admitido';
+      case 'SUSPENSA': return 'status-suspensa';
+      case 'CANCELADA': return 'status-cancelada';
       default: return '';
     }
   }
