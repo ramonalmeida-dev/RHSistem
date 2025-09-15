@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useBrevoEmail } from '@/hooks/useBrevoEmail';
+import { EmailConfirmationModal } from './EmailConfirmationModal';
 
 export const CANDIDATE_STATUSES = {
   selecionando: {
@@ -110,6 +112,7 @@ interface KanbanBoardProps {
   onSendEmail?: (candidate: Candidate) => void;
   onCandidatesUpdate?: (candidates: Candidate[]) => void;
   vagaId?: string;
+  vagaTitulo?: string;
 }
 
 // Componente de card do candidato
@@ -353,16 +356,27 @@ function KanbanColumn({
   );
 }
 
-export function KanbanBoard({ 
-  candidates, 
-  onCandidateUpdate, 
-  onAddCandidate, 
-  onViewDetails, 
-  onSendEmail, 
+export function KanbanBoard({
+  candidates,
+  onCandidateUpdate,
+  onAddCandidate,
+  onViewDetails,
+  onSendEmail,
   onCandidatesUpdate,
-  vagaId 
+  vagaId,
+  vagaTitulo
 }: KanbanBoardProps) {
   const { toast } = useToast();
+  const { sendNotificacaoKanban, isLoading: emailLoading } = useBrevoEmail();
+  
+  // Estados para modal de confirmação de email
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    candidate: any;
+    newStatus: string;
+    oldStatus: string;
+    statusTitle: string;
+  } | null>(null);
   
   // Estados para filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -468,47 +482,70 @@ export function KanbanBoard({
     const newStatus = destination.droppableId as keyof typeof CANDIDATE_STATUSES;
     
     if (candidate.status !== newStatus) {
+      // Abrir modal de confirmação de email
+      setPendingStatusChange({
+        candidate,
+        newStatus,
+        oldStatus: candidate.status,
+        statusTitle: CANDIDATE_STATUSES[newStatus].title
+      });
+      setEmailModalOpen(true);
+    }
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+
+    const { candidate, newStatus } = pendingStatusChange;
+
+    try {
       // Atualizar estado local
-      onCandidateUpdate(candidate.id, newStatus);
+      onCandidateUpdate(candidate.id, newStatus as keyof typeof CANDIDATE_STATUSES);
 
       // Salvar no banco de dados
       if (vagaId) {
-        try {
-          const { error } = await supabase
-            .from('candidatos_vagas')
-            .update({
-              status_atual: newStatus,
-              updated_at: new Date().toISOString()
-            })
-            .eq('candidato_id', candidate.id)
-            .eq('vaga_id', vagaId);
+        const { error } = await supabase
+          .from('candidatos_vagas')
+          .update({
+            status_atual: newStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('candidato_id', candidate.id)
+          .eq('vaga_id', vagaId);
 
-          if (error) {
-            toast({
-              title: "Erro",
-              description: `Erro ao salvar mudança de status: ${error.message}`,
-              variant: "destructive",
-            });
-            // Reverter a mudança no estado local
-            onCandidateUpdate(candidate.id, candidate.status);
-            return;
-          }
-
-          toast({
-            title: "Status atualizado",
-            description: `${candidate.name} movido para ${CANDIDATE_STATUSES[newStatus].title}`,
-          });
-        } catch (error) {
+        if (error) {
           toast({
             title: "Erro",
-            description: "Erro ao salvar mudança de status",
+            description: `Erro ao salvar mudança de status: ${error.message}`,
             variant: "destructive",
           });
           // Reverter a mudança no estado local
           onCandidateUpdate(candidate.id, candidate.status);
+          return;
         }
+
+        toast({
+          title: "Status atualizado",
+          description: `${candidate.name} movido para ${CANDIDATE_STATUSES[newStatus].title}`,
+        });
       }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar mudança de status",
+        variant: "destructive",
+      });
+      // Reverter a mudança no estado local
+      onCandidateUpdate(candidate.id, candidate.status);
+    } finally {
+      // Limpar estado pendente
+      setPendingStatusChange(null);
     }
+  };
+
+  const handleCloseEmailModal = () => {
+    setEmailModalOpen(false);
+    setPendingStatusChange(null);
   };
 
   const handleRatingUpdate = async (candidate: Candidate, newRating: number) => {
@@ -707,6 +744,20 @@ export function KanbanBoard({
           ))}
         </div>
       </DragDropContext>
+
+      {/* Modal de confirmação de email */}
+      {pendingStatusChange && (
+        <EmailConfirmationModal
+          isOpen={emailModalOpen}
+          onClose={handleCloseEmailModal}
+          onConfirm={handleConfirmStatusChange}
+          candidate={pendingStatusChange.candidate}
+          newStatus={pendingStatusChange.newStatus}
+          oldStatus={pendingStatusChange.oldStatus}
+          vagaTitulo={vagaTitulo || `Vaga ${vagaId || 'N/A'}`}
+          statusTitle={pendingStatusChange.statusTitle}
+        />
+      )}
     </div>
   );
 } 

@@ -52,7 +52,7 @@ interface CurriculoData {
   formacao: string;
   localizacao: string;
   disponibilidade: 'disponivel' | 'empregado' | 'indisponivel';
-  avaliacao: number;
+  avaliacao: number | null;
   observacoes: string;
   linkedin_url: string;
   portfolio_url: string;
@@ -71,7 +71,7 @@ export function EditCandidatoModal({ isOpen, onClose, onSuccess, candidato, curr
     formacao: "",
     localizacao: "",
     disponibilidade: 'disponivel',
-    avaliacao: 0,
+    avaliacao: 1,
     observacoes: "",
     linkedin_url: "",
     portfolio_url: ""
@@ -98,7 +98,7 @@ export function EditCandidatoModal({ isOpen, onClose, onSuccess, candidato, curr
         formacao: curriculo.formacao || "",
         localizacao: curriculo.localizacao || "",
         disponibilidade: curriculo.disponibilidade || 'disponivel',
-        avaliacao: curriculo.avaliacao || 0,
+        avaliacao: curriculo.avaliacao || 1,
         observacoes: curriculo.observacoes || "",
         linkedin_url: curriculo.linkedin_url || "",
         portfolio_url: curriculo.portfolio_url || ""
@@ -113,7 +113,7 @@ export function EditCandidatoModal({ isOpen, onClose, onSuccess, candidato, curr
     }
   };
 
-  const handleCurriculoChange = (field: keyof CurriculoData, value: string | number) => {
+  const handleCurriculoChange = (field: keyof CurriculoData, value: string | number | null) => {
     setCurriculoData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -177,8 +177,8 @@ export function EditCandidatoModal({ isOpen, onClose, onSuccess, candidato, curr
       newErrors.experiencia_anos = "Experiência deve ser um número positivo";
     }
 
-    if (curriculoData.avaliacao < 0 || curriculoData.avaliacao > 5) {
-      newErrors.avaliacao = "Avaliação deve ser entre 0 e 5";
+    if (curriculoData.avaliacao !== null && (curriculoData.avaliacao < 1 || curriculoData.avaliacao > 5)) {
+      newErrors.avaliacao = "Avaliação deve ser entre 1 e 5";
     }
 
     setErrors(newErrors);
@@ -291,7 +291,7 @@ export function EditCandidatoModal({ isOpen, onClose, onSuccess, candidato, curr
       formacao: "",
       localizacao: "",
       disponibilidade: 'disponivel',
-      avaliacao: 0,
+      avaliacao: null,
       observacoes: "",
       linkedin_url: "",
       portfolio_url: ""
@@ -464,19 +464,19 @@ export function EditCandidatoModal({ isOpen, onClose, onSuccess, candidato, curr
               <div className="space-y-2">
                 <Label htmlFor="avaliacao" className="flex items-center gap-2">
                   <Star className="h-4 w-4" />
-                  Avaliação (0-5)
+                  Avaliação (1-5)
                 </Label>
                 <Input
                   id="avaliacao"
                   type="number"
-                  min="0"
+                  min="1"
                   max="5"
                   step="0.5"
-                  placeholder="0"
-                  value={curriculoData.avaliacao}
+                  placeholder="1"
+                  value={curriculoData.avaliacao || ""}
                   onChange={(e) => {
                     const value = parseFloat(e.target.value);
-                    handleCurriculoChange("avaliacao", isNaN(value) ? 0 : value);
+                    handleCurriculoChange("avaliacao", isNaN(value) ? null : value);
                   }}
                   className={errors.avaliacao ? "border-destructive" : ""}
                 />

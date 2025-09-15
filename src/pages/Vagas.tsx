@@ -711,6 +711,7 @@ const Vagas = () => {
               onSendEmail={handleSendEmailToCandidate}
               onCandidatesUpdate={setSelectedVagaCandidatos}
               vagaId={selectedVaga.id}
+              vagaTitulo={selectedVaga.cargo}
             />
           </div>
         ) : (

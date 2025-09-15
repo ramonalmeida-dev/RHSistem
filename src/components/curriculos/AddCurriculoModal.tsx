@@ -47,7 +47,7 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
     formacao: "",
     localizacao: "",
     disponibilidade: "disponivel",
-    avaliacao: 0,
+    avaliacao: 1,
     observacoes: "",
     linkedin_url: "",
     portfolio_url: ""
@@ -138,7 +138,7 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
         formacao: "",
         localizacao: "",
         disponibilidade: "disponivel",
-        avaliacao: 0,
+        avaliacao: 1,
         observacoes: "",
         linkedin_url: "",
         portfolio_url: ""
