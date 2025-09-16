@@ -17,19 +17,25 @@ export interface EmailTemplate {
   textContent?: string;
 }
 
-export interface SendEmailRequest {
-  sender: EmailSender;
-  to: EmailRecipient[];
-  cc?: EmailRecipient[];
-  bcc?: EmailRecipient[];
+// Interface correta do SendGrid baseada na documentação oficial
+export interface SendGridRequest {
+  from: EmailSender;
+  personalizations: Array<{
+    to: EmailRecipient[];
+    cc?: EmailRecipient[];
+    bcc?: EmailRecipient[];
+  }>;
   subject: string;
-  htmlContent: string;
-  textContent?: string;
-  templateId?: string;
-  params?: Record<string, any>;
-  tags?: string[];
+  content: Array<{
+    type: string;
+    value: string;
+  }>;
+  categories?: string[];
   headers?: Record<string, string>;
 }
+
+// Mantém compatibilidade com código existente
+export interface SendEmailRequest extends SendGridRequest {}
 
 export interface SendEmailResponse {
   messageId: string;
@@ -356,6 +362,108 @@ class SendGridEmailService {
     }
   }
 
+  // Helper para converter formato antigo para SendGrid
+  private createSendGridPayload(params: {
+    from: EmailSender;
+    to: EmailRecipient[];
+    cc?: EmailRecipient[];
+    bcc?: EmailRecipient[];
+    subject: string;
+    htmlContent: string;
+    textContent?: string;
+    categories?: string[];
+  }): SendGridRequest {
+    // Debug: log dos parâmetros recebidos
+    console.log('createSendGridPayload - params:', {
+      from: params.from,
+      to: params.to,
+      subject: params.subject,
+      hasHtmlContent: !!params.htmlContent
+    });
+
+    // Validação: to é obrigatório e deve ter pelo menos um destinatário
+    if (!params.to || params.to.length === 0) {
+      console.error('Erro de validação - to inválido:', params.to);
+      throw new Error('Campo "to" é obrigatório e deve conter pelo menos um destinatário');
+    }
+
+    // Validação adicional: verificar se os emails em to são válidos
+    for (let i = 0; i < params.to.length; i++) {
+      const recipient = params.to[i];
+      if (!recipient.email || recipient.email.trim() === '') {
+        console.error(`Erro de validação - destinatário ${i} sem email:`, recipient);
+        throw new Error(`Destinatário ${i + 1} não possui email válido`);
+      }
+    }
+
+    // Validação: from é obrigatório
+    if (!params.from || !params.from.email) {
+      throw new Error('Campo "from" é obrigatório e deve conter um email válido');
+    }
+
+    // Validação: subject é obrigatório
+    if (!params.subject || params.subject.trim() === '') {
+      throw new Error('Campo "subject" é obrigatório');
+    }
+
+    const content: Array<{ type: string; value: string }> = [];
+    
+    if (params.htmlContent) {
+      content.push({
+        type: 'text/html',
+        value: params.htmlContent
+      });
+    }
+    
+    if (params.textContent) {
+      content.push({
+        type: 'text/plain',
+        value: params.textContent
+      });
+    }
+
+    // Validação: content é obrigatório
+    if (content.length === 0) {
+      throw new Error('Campo "content" é obrigatório - deve ter htmlContent ou textContent');
+    }
+
+    // Construir personalizations corretamente
+    const personalization: {
+      to: EmailRecipient[];
+      cc?: EmailRecipient[];
+      bcc?: EmailRecipient[];
+    } = {
+      to: params.to
+    };
+
+    // Só adicionar cc e bcc se existirem e não estiverem vazios
+    if (params.cc && params.cc.length > 0) {
+      personalization.cc = params.cc;
+    }
+    
+    if (params.bcc && params.bcc.length > 0) {
+      personalization.bcc = params.bcc;
+    }
+
+    const payload: any = {
+      from: params.from,
+      personalizations: [personalization],
+      subject: params.subject,
+      content,
+      // HACK: Adicionar também 'to' no nível raiz caso a Edge Function esteja procurando aqui
+      to: params.to
+    };
+
+    // Só adicionar categories se existir
+    if (params.categories && params.categories.length > 0) {
+      payload.categories = params.categories;
+    }
+
+    console.log('SendGrid Payload (com hack to):', JSON.stringify(payload, null, 2));
+
+    return payload;
+  }
+
   /**
    * Envia um email usando a API do SendGrid
    */
@@ -376,8 +484,8 @@ class SendGridEmailService {
   }): Promise<SendEmailResponse> {
     const template = EMAIL_TEMPLATES.CANDIDATO_APROVADO;
     
-    return await this.sendEmail({
-      sender: params.sender || DEFAULT_SENDER,
+    const payload = this.createSendGridPayload({
+      from: params.sender || DEFAULT_SENDER,
       to: [{ email: params.candidatoEmail, name: params.candidatoNome }],
       subject: template.subject,
       htmlContent: template.getHtmlContent({
@@ -386,8 +494,10 @@ class SendGridEmailService {
         empresaNome: params.empresaNome,
         proximosPassos: params.proximosPassos
       }),
-      tags: ['candidato-aprovado', 'processo-seletivo']
+      categories: ['candidato-aprovado', 'processo-seletivo']
     });
+    
+    return await this.sendEmail(payload);
   }
 
   /**
@@ -403,8 +513,8 @@ class SendGridEmailService {
   }): Promise<SendEmailResponse> {
     const template = EMAIL_TEMPLATES.CANDIDATO_REJEITADO;
     
-    return await this.sendEmail({
-      sender: params.sender || DEFAULT_SENDER,
+    const payload = this.createSendGridPayload({
+      from: params.sender || DEFAULT_SENDER,
       to: [{ email: params.candidatoEmail, name: params.candidatoNome }],
       subject: template.subject,
       htmlContent: template.getHtmlContent({
@@ -413,8 +523,10 @@ class SendGridEmailService {
         empresaNome: params.empresaNome,
         feedback: params.feedback
       }),
-      tags: ['candidato-rejeitado', 'processo-seletivo']
+      categories: ['candidato-rejeitado', 'processo-seletivo']
     });
+    
+    return await this.sendEmail(payload);
   }
 
   /**
@@ -431,8 +543,8 @@ class SendGridEmailService {
   }): Promise<SendEmailResponse> {
     const template = EMAIL_TEMPLATES.POSICAO_FECHADA;
     
-    return await this.sendEmail({
-      sender: params.sender || DEFAULT_SENDER,
+    const payload = this.createSendGridPayload({
+      from: params.sender || DEFAULT_SENDER,
       to: [{ email: params.clienteEmail, name: params.clienteNome }],
       subject: template.subject,
       htmlContent: template.getHtmlContent({
@@ -442,8 +554,10 @@ class SendGridEmailService {
         consultorNome: params.consultorNome,
         dataFechamento: params.dataFechamento
       }),
-      tags: ['posicao-fechada', 'cliente']
+      categories: ['posicao-fechada', 'cliente']
     });
+    
+    return await this.sendEmail(payload);
   }
 
   /**
@@ -458,11 +572,28 @@ class SendGridEmailService {
     observacoes?: string;
     sender?: EmailSender;
   }): Promise<SendEmailResponse> {
+    // Debug e validação
+    console.log('sendNotificacaoKanban - params:', {
+      candidatoEmail: params.candidatoEmail,
+      candidatoNome: params.candidatoNome,
+      vagaTitulo: params.vagaTitulo,
+      novoStatus: params.novoStatus
+    });
+
+    // Validação do email do candidato
+    if (!params.candidatoEmail || params.candidatoEmail.trim() === '') {
+      throw new Error('Email do candidato é obrigatório para envio de notificação');
+    }
+
     const template = EMAIL_TEMPLATES.NOTIFICACAO_KANBAN;
     
-    return await this.sendEmail({
-      sender: params.sender || DEFAULT_SENDER,
-      to: [{ email: params.candidatoEmail, name: params.candidatoNome }],
+    // Log específico do array 'to' antes de criar o payload
+    const toArray = [{ email: params.candidatoEmail, name: params.candidatoNome }];
+    console.log('sendNotificacaoKanban - array TO:', JSON.stringify(toArray, null, 2));
+    
+    const payload = this.createSendGridPayload({
+      from: params.sender || DEFAULT_SENDER,
+      to: toArray,
       subject: template.subject,
       htmlContent: template.getHtmlContent({
         candidatoNome: params.candidatoNome,
@@ -471,8 +602,10 @@ class SendGridEmailService {
         consultorNome: params.consultorNome,
         observacoes: params.observacoes
       }),
-      tags: ['kanban-update', 'status-change']
+      categories: ['kanban-update', 'status-change']
     });
+    
+    return await this.sendEmail(payload);
   }
 
   /**
@@ -488,8 +621,8 @@ class SendGridEmailService {
   }): Promise<SendEmailResponse> {
     const template = EMAIL_TEMPLATES.CANDIDATO_NAO_APROVEITADO_TRIAGEM;
     
-    return await this.sendEmail({
-      sender: params.sender || DEFAULT_SENDER,
+    const payload = this.createSendGridPayload({
+      from: params.sender || DEFAULT_SENDER,
       to: [{ email: params.candidatoEmail, name: params.candidatoNome }],
       subject: template.subject,
       htmlContent: template.getHtmlContent({
@@ -498,8 +631,10 @@ class SendGridEmailService {
         consultorNome: params.consultorNome,
         empresaNome: params.empresaNome
       }),
-      tags: ['candidato-nao-aproveitado', 'triagem-inicial']
+      categories: ['candidato-nao-aproveitado', 'triagem-inicial']
     });
+    
+    return await this.sendEmail(payload);
   }
 
   /**
@@ -515,8 +650,8 @@ class SendGridEmailService {
   }): Promise<SendEmailResponse> {
     const template = EMAIL_TEMPLATES.CANDIDATO_NAO_APROVEITADO_ENTREVISTA_CONSULTOR;
     
-    return await this.sendEmail({
-      sender: params.sender || DEFAULT_SENDER,
+    const payload = this.createSendGridPayload({
+      from: params.sender || DEFAULT_SENDER,
       to: [{ email: params.candidatoEmail, name: params.candidatoNome }],
       subject: template.subject,
       htmlContent: template.getHtmlContent({
@@ -525,8 +660,10 @@ class SendGridEmailService {
         consultorNome: params.consultorNome,
         empresaNome: params.empresaNome
       }),
-      tags: ['candidato-nao-aproveitado', 'entrevista-consultor']
+      categories: ['candidato-nao-aproveitado', 'entrevista-consultor']
     });
+    
+    return await this.sendEmail(payload);
   }
 
   /**
@@ -542,8 +679,8 @@ class SendGridEmailService {
   }): Promise<SendEmailResponse> {
     const template = EMAIL_TEMPLATES.CANDIDATO_NAO_APROVEITADO_ENTREVISTA_EMPRESA;
     
-    return await this.sendEmail({
-      sender: params.sender || DEFAULT_SENDER,
+    const payload = this.createSendGridPayload({
+      from: params.sender || DEFAULT_SENDER,
       to: [{ email: params.candidatoEmail, name: params.candidatoNome }],
       subject: template.subject,
       htmlContent: template.getHtmlContent({
@@ -552,8 +689,10 @@ class SendGridEmailService {
         consultorNome: params.consultorNome,
         empresaNome: params.empresaNome
       }),
-      tags: ['candidato-nao-aproveitado', 'entrevista-empresa']
+      categories: ['candidato-nao-aproveitado', 'entrevista-empresa']
     });
+    
+    return await this.sendEmail(payload);
   }
 
   /**
@@ -567,18 +706,35 @@ class SendGridEmailService {
     cc?: EmailRecipient[];
     bcc?: EmailRecipient[];
     sender?: EmailSender;
-    tags?: string[];
+    categories?: string[];
   }): Promise<SendEmailResponse> {
-    return await this.sendEmail({
-      sender: params.sender || DEFAULT_SENDER,
+    const payload = this.createSendGridPayload({
+      from: params.sender || DEFAULT_SENDER,
       to: params.to,
       cc: params.cc,
       bcc: params.bcc,
       subject: params.subject,
       htmlContent: params.htmlContent,
       textContent: params.textContent,
-      tags: params.tags || ['custom-email']
+      categories: params.categories || ['custom-email']
     });
+    
+    return await this.sendEmail(payload);
+  }
+
+  /**
+   * Método de teste para verificar payload gerado
+   */
+  async testPayloadGeneration(): Promise<SendGridRequest> {
+    const payload = this.createSendGridPayload({
+      from: DEFAULT_SENDER,
+      to: [{ email: 'test@example.com', name: 'Test User' }],
+      subject: 'Test Email - Lotus Recruit Hub',
+      htmlContent: '<h1>Email de teste</h1><p>Este é um email de teste do sistema.</p>',
+      categories: ['test', 'debug']
+    });
+    
+    return payload;
   }
 }
 

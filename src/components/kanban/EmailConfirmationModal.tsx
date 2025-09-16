@@ -13,7 +13,7 @@ import { sendgridEmailService } from '@/lib/sendgridEmailService';
 interface Candidate {
   id: string;
   name: string;
-  email?: string;
+  email: string;
   status: string;
 }
 
@@ -131,8 +131,17 @@ export function EmailConfirmationModal({
       // Primeiro confirma a mudança de status
       onConfirm();
 
-      // Se deve enviar email, usuário escolheu enviar e candidato tem email
-      if (shouldSendEmail && candidate.email) {
+      // Se deve enviar email e usuário escolheu enviar
+      console.log('Debug Kanban Email:', {
+        shouldSendEmail,
+        candidateEmail: candidate.email,
+        candidateName: candidate.name,
+        vagaTitulo,
+        newStatus,
+        oldStatus
+      });
+
+      if (shouldSendEmail) {
         let emailResult;
 
         switch (emailConfig.templateType) {
@@ -194,8 +203,6 @@ export function EmailConfirmationModal({
         } else {
           toast.error(`Erro ao enviar email: ${emailResult.error}`);
         }
-      } else if (shouldSendEmail && !candidate.email) {
-        toast.warning('Candidato não possui email. Apenas o status foi atualizado.');
       }
 
     } catch (error) {

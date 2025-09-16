@@ -109,7 +109,7 @@ export function EmailModal({
         cc: ccRecipients.length > 0 ? ccRecipients : undefined,
         subject,
         htmlContent,
-        tags: ['manual-send', selectedTemplate || 'custom']
+        categories: ['manual-send', selectedTemplate || 'custom']
       });
 
       if (result.success) {
