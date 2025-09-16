@@ -80,8 +80,21 @@ class ResetSenhaService {
    */
   async verificarSessaoRecuperacao(): Promise<boolean> {
     try {
+      // Verificar se há tokens na URL
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const isRecoveryUrl = hashParams.get('type') === 'recovery' || hashParams.has('access_token');
+      
+      if (isRecoveryUrl) {
+        console.log('Recovery URL detected');
+        return true;
+      }
+
+      // Verificar se há sessão ativa
       const { data: { session } } = await supabase.auth.getSession();
-      return !!session;
+      const hasSession = !!session;
+      
+      console.log('Session check:', { hasSession, userId: session?.user?.id });
+      return hasSession;
     } catch (error) {
       console.error('Erro ao verificar sessão:', error);
       return false;

@@ -10,6 +10,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true, // Habilitar para detectar tokens de reset
+    flowType: 'pkce', // Usar PKCE flow para melhor segurança
   },
 });
 

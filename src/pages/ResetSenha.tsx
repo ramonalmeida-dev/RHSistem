@@ -9,6 +9,7 @@ import { Loader2, Lock, Eye, EyeOff, CheckCircle, AlertTriangle } from 'lucide-r
 import { toast } from 'sonner';
 import resetSenhaService from '@/lib/resetSenhaService';
 import { usePasswordReset } from '@/hooks/usePasswordReset';
+import ResetPasswordDebug from '@/components/debug/ResetPasswordDebug';
 
 const ResetSenha: React.FC = () => {
   const navigate = useNavigate();
@@ -152,6 +153,9 @@ const ResetSenha: React.FC = () => {
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
       
       <div className="w-full max-w-lg relative z-10">
+        {/* Debug Component */}
+        <ResetPasswordDebug />
+        
         {/* Title Section */}
         <div className="text-center mb-8">
           <div className="space-y-3">
