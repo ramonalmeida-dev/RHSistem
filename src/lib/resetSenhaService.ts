@@ -51,6 +51,10 @@ class ResetSenhaService {
         throw new Error(`Senha não atende aos critérios:\n${passwordErrors.join('\n')}`);
       }
 
+      // Aguardar a sessão ser estabelecida
+      console.log('Aguardando sessão ser estabelecida...');
+      await this.aguardarSessao();
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
@@ -73,6 +77,25 @@ class ResetSenhaService {
         }
       };
     }
+  }
+
+  /**
+   * Aguarda a sessão ser estabelecida (máximo 10 tentativas)
+   */
+  private async aguardarSessao(maxTentativas: number = 10): Promise<void> {
+    for (let i = 0; i < maxTentativas; i++) {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (session && !error) {
+        console.log(`Sessão estabelecida na tentativa ${i + 1}`);
+        return;
+      }
+      
+      console.log(`Tentativa ${i + 1}: Aguardando sessão... (${session ? 'tem sessão' : 'sem sessão'}, ${error ? 'com erro' : 'sem erro'})`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    throw new Error('Sessão não foi estabelecida após múltiplas tentativas');
   }
 
   /**

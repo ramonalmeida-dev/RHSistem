@@ -13,7 +13,7 @@ import ResetPasswordDebug from '@/components/debug/ResetPasswordDebug';
 
 const ResetSenha: React.FC = () => {
   const navigate = useNavigate();
-  const { isRecoverySession, isLoading: validatingSession, error: sessionError } = usePasswordReset();
+  const { isRecoverySession, isLoading: validatingSession, error: sessionError, hasValidSession } = usePasswordReset();
   
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -188,6 +188,14 @@ const ResetSenha: React.FC = () => {
                   <AlertDescription className="text-red-800 whitespace-pre-line">{error}</AlertDescription>
                 </Alert>
               )}
+              
+              {isRecoverySession && !hasValidSession && (
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertDescription className="text-blue-800">
+                    Aguardando sessão de recuperação ser estabelecida...
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <div className="space-y-3">
                 <Label htmlFor="newPassword" className="text-slate-700 font-medium">Nova Senha</Label>
@@ -264,12 +272,17 @@ const ResetSenha: React.FC = () => {
               <Button 
                 type="submit" 
                 className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
-                disabled={loading || !newPassword || !confirmPassword}
+                disabled={loading || !newPassword || !confirmPassword || !hasValidSession}
               >
                 {loading ? (
                   <>
                     <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                     Alterando...
+                  </>
+                ) : !hasValidSession ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Aguardando sessão...
                   </>
                 ) : (
                   <>

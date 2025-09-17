@@ -5,12 +5,14 @@ interface UsePasswordResetReturn {
   isRecoverySession: boolean;
   isLoading: boolean;
   error: string | null;
+  hasValidSession: boolean;
 }
 
 export const usePasswordReset = (): UsePasswordResetReturn => {
   const [isRecoverySession, setIsRecoverySession] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasValidSession, setHasValidSession] = useState(false);
 
   useEffect(() => {
     const checkRecoverySession = async () => {
@@ -49,13 +51,21 @@ export const usePasswordReset = (): UsePasswordResetReturn => {
         // 1. É uma URL de recuperação OU
         // 2. Há uma sessão válida na página de reset
         const isRecovery = isRecoveryUrl || hasAccessToken || (session && window.location.pathname === '/reset-senha');
+        const hasSession = !!session;
         
         console.log('Final recovery status:', isRecovery);
+        console.log('Has valid session:', hasSession);
         
         setIsRecoverySession(isRecovery);
+        setHasValidSession(hasSession);
         
         if (!isRecovery && window.location.pathname === '/reset-senha') {
           setError('Acesse esta página através do link enviado por email');
+        } else if (isRecovery && !hasSession) {
+          console.log('Recovery URL detected but no session yet, will retry...');
+          // Se é uma URL de recuperação mas não há sessão, aguardar mais um pouco
+          setTimeout(() => checkRecoverySession(), 1000);
+          return; // Não definir como carregamento completo ainda
         }
       } catch (err: any) {
         console.error('Erro ao verificar sessão de recuperação:', err);
@@ -87,5 +97,6 @@ export const usePasswordReset = (): UsePasswordResetReturn => {
     isRecoverySession,
     isLoading,
     error,
+    hasValidSession,
   };
 }; 
