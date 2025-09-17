@@ -80,9 +80,9 @@ class ResetSenhaService {
   }
 
   /**
-   * Aguarda a sessão ser estabelecida (máximo 10 tentativas)
+   * Aguarda a sessão ser estabelecida (máximo 15 tentativas para PKCE)
    */
-  private async aguardarSessao(maxTentativas: number = 10): Promise<void> {
+  private async aguardarSessao(maxTentativas: number = 15): Promise<void> {
     for (let i = 0; i < maxTentativas; i++) {
       const { data: { session }, error } = await supabase.auth.getSession();
       
@@ -105,10 +105,11 @@ class ResetSenhaService {
     try {
       // Verificar se há tokens na URL
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const isRecoveryUrl = hashParams.get('type') === 'recovery' || hashParams.has('access_token');
+      const searchParams = new URLSearchParams(window.location.search);
+      const isRecoveryUrl = hashParams.get('type') === 'recovery' || hashParams.has('access_token') || searchParams.has('code');
       
       if (isRecoveryUrl) {
-        console.log('Recovery URL detected');
+        console.log('Recovery URL detected (hash or PKCE code)');
         return true;
       }
 

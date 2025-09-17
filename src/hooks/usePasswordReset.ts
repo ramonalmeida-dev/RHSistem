@@ -19,18 +19,24 @@ export const usePasswordReset = (): UsePasswordResetReturn => {
       try {
         // Verificar se há fragmentos na URL que indicam recuperação
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const searchParams = new URLSearchParams(window.location.search);
         const isRecoveryUrl = hashParams.get('type') === 'recovery';
         const hasAccessToken = hashParams.has('access_token');
+        const hasCode = searchParams.has('code'); // PKCE flow
         
         console.log('URL:', window.location.href);
         console.log('Hash params:', Object.fromEntries(hashParams));
+        console.log('Search params:', Object.fromEntries(searchParams));
         console.log('Is recovery URL:', isRecoveryUrl);
         console.log('Has access token:', hasAccessToken);
+        console.log('Has code (PKCE):', hasCode);
         
         // Se é uma URL de recuperação, aguardar processamento
-        if (isRecoveryUrl || hasAccessToken) {
-          console.log('Aguardando Supabase processar token...');
-          await new Promise(resolve => setTimeout(resolve, 2000));
+        if (isRecoveryUrl || hasAccessToken || hasCode) {
+          console.log('Aguardando Supabase processar token/code...');
+          // PKCE flow pode demorar mais
+          const waitTime = hasCode ? 3000 : 2000;
+          await new Promise(resolve => setTimeout(resolve, waitTime));
         }
 
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -49,8 +55,9 @@ export const usePasswordReset = (): UsePasswordResetReturn => {
 
         // Considerar válida se:
         // 1. É uma URL de recuperação OU
-        // 2. Há uma sessão válida na página de reset
-        const isRecovery = isRecoveryUrl || hasAccessToken || (session && window.location.pathname === '/reset-senha');
+        // 2. Há uma sessão válida na página de reset OU
+        // 3. Há um code na URL (PKCE flow)
+        const isRecovery = isRecoveryUrl || hasAccessToken || hasCode || (session && window.location.pathname === '/reset-senha');
         const hasSession = !!session;
         
         console.log('Final recovery status:', isRecovery);
@@ -64,7 +71,9 @@ export const usePasswordReset = (): UsePasswordResetReturn => {
         } else if (isRecovery && !hasSession) {
           console.log('Recovery URL detected but no session yet, will retry...');
           // Se é uma URL de recuperação mas não há sessão, aguardar mais um pouco
-          setTimeout(() => checkRecoverySession(), 1000);
+          // PKCE pode demorar mais, então aguardar mais tempo
+          const retryTime = hasCode ? 2000 : 1000;
+          setTimeout(() => checkRecoverySession(), retryTime);
           return; // Não definir como carregamento completo ainda
         }
       } catch (err: any) {
