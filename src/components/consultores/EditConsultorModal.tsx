@@ -12,9 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Key, RefreshCw, Eye, EyeOff } from "lucide-react";
+import alterarSenhaService from "@/lib/alterarSenhaService";
 
 interface Usuario {
   id: string;
@@ -52,6 +55,11 @@ export function EditConsultorModal({ open, onOpenChange, consultor, onSuccess }:
     role_id: "",
     ativo: true
   });
+  
+  // Estados para alterar senha
+  const [novaSenha, setNovaSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [alterandoSenha, setAlterandoSenha] = useState(false);
 
   useEffect(() => {
     if (open && consultor) {
@@ -61,6 +69,8 @@ export function EditConsultorModal({ open, onOpenChange, consultor, onSuccess }:
         role_id: consultor.role_id,
         ativo: consultor.ativo
       });
+      setNovaSenha("");
+      setMostrarSenha(false);
       carregarRoles();
     }
   }, [open, consultor]);
@@ -114,6 +124,41 @@ export function EditConsultorModal({ open, onOpenChange, consultor, onSuccess }:
     }
   };
 
+  const handleAlterarSenha = async () => {
+    if (!consultor || !novaSenha) return;
+    
+    const erros = alterarSenhaService.validarSenha(novaSenha);
+    if (erros.length > 0) {
+      toast.error(`Senha inválida: ${erros.join(', ')}`);
+      return;
+    }
+    
+    setAlterandoSenha(true);
+    
+    try {
+      const result = await alterarSenhaService.alterarSenhaUsuario(consultor.id, novaSenha);
+      
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      
+      toast.success(result.data?.message || 'Senha alterada com sucesso!');
+      setNovaSenha("");
+    } catch (error: any) {
+      console.error('Erro ao alterar senha:', error);
+      toast.error(error.message || 'Erro ao alterar senha');
+    } finally {
+      setAlterandoSenha(false);
+    }
+  };
+
+  const handleGerarSenhaAleatoria = () => {
+    const senhaAleatoria = alterarSenhaService.gerarSenhaAleatoria(8);
+    setNovaSenha(senhaAleatoria);
+    setMostrarSenha(true);
+    toast.info('Senha aleatória gerada! Não esqueça de salvar.');
+  };
+
   const handleCancel = () => {
     onOpenChange(false);
   };
@@ -122,7 +167,7 @@ export function EditConsultorModal({ open, onOpenChange, consultor, onSuccess }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Usuário</DialogTitle>
           <DialogDescription>
@@ -185,6 +230,66 @@ export function EditConsultorModal({ open, onOpenChange, consultor, onSuccess }:
             />
             <Label htmlFor="ativo">Usuário ativo</Label>
           </div>
+
+          <Separator />
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Key className="h-4 w-4" />
+                Alterar Senha
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nova-senha">Nova Senha</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="nova-senha"
+                      type={mostrarSenha ? "text" : "password"}
+                      value={novaSenha}
+                      onChange={(e) => setNovaSenha(e.target.value)}
+                      placeholder="Digite a nova senha (mín. 6 caracteres)"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3"
+                      onClick={() => setMostrarSenha(!mostrarSenha)}
+                    >
+                      {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGerarSenhaAleatoria}
+                    title="Gerar senha aleatória"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Deixe vazio para manter a senha atual
+                </p>
+              </div>
+              
+              {novaSenha && (
+                <Button
+                  type="button"
+                  onClick={handleAlterarSenha}
+                  disabled={alterandoSenha || !novaSenha}
+                  className="w-full"
+                  variant="secondary"
+                >
+                  {alterandoSenha && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Alterar Senha
+                </Button>
+              )}
+            </CardContent>
+          </Card>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleCancel}>

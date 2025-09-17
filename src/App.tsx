@@ -20,8 +20,6 @@ import VagaPublica from "./pages/VagaPublica";
 import CandidatoLogin from "./pages/CandidatoLogin";
 import CandidatoRegister from "./pages/CandidatoRegister";
 import CandidatoRecuperarSenha from "./pages/CandidatoRecuperarSenha";
-import RecuperarSenha from "./pages/RecuperarSenha";
-import ResetSenha from "./pages/ResetSenha";
 
 import NotFound from "./pages/NotFound";
 
@@ -38,8 +36,6 @@ const App = () => (
             <Routes>
               {/* Rotas públicas */}
               <Route path="/login" element={<Login />} />
-              <Route path="/recuperar-senha" element={<RecuperarSenha />} />
-              <Route path="/reset-senha" element={<ResetSenha />} />
               <Route path="/vaga/:vagaId" element={<VagaPublica />} />
               <Route path="/candidato/login" element={<CandidatoLogin />} />
               <Route path="/candidato/register" element={<CandidatoRegister />} />

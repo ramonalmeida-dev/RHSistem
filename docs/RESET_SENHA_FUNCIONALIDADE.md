@@ -1,35 +1,31 @@
-# 🔑 Funcionalidade de Reset de Senha
+# 🔑 Funcionalidade de Alteração de Senha (Admin)
 
 ## Visão Geral
 
-Sistema completo de recuperação e redefinição de senha para o Lotus Recruit Hub, implementado com **Supabase Auth nativo** e interface React moderna.
+Sistema de alteração de senhas pelo administrador no Lotus Recruit Hub, implementado com **Service Role** do Supabase para máxima segurança.
 
 ## 🚀 Funcionalidades Implementadas
 
-### 1. Supabase Auth Nativo
-- **Método**: `supabase.auth.resetPasswordForEmail()`
-- **Método**: `supabase.auth.updateUser()`
-- **Vantagens**:
-  - ✅ Gerenciamento automático de tokens
-  - ✅ Envio de emails integrado
-  - ✅ Segurança robusta
-  - ✅ Sem necessidade de tabelas customizadas
-  - ✅ Detecção automática de sessões de recuperação
+### 1. Edge Function `alterar-senha-admin`
+- **Localização**: `supabase/functions/alterar-senha-admin/index.ts`
+- **Método**: POST
+- **Autenticação**: Service Role + JWT do usuário admin
+- **Funcionalidades**:
+  - ✅ Verificação de permissões de admin
+  - ✅ Validação de força da senha
+  - ✅ Alteração via `supabase.auth.admin.updateUserById()`
+  - ✅ Atualização da tabela `usuarios` (hash bcrypt)
+  - ✅ Logs de segurança
 
-### 2. Páginas Frontend
+### 2. Interface Admin
 
-#### `/recuperar-senha` - Solicitação de Reset
-- Formulário para inserir email
-- Integração com `supabase.auth.resetPasswordForEmail()`
+#### Modal `EditConsultorModal` - Edição de Usuário
+- Seção dedicada para alteração de senha
+- Campo com toggle para mostrar/ocultar senha
+- Botão para gerar senha aleatória
+- Validação em tempo real
 - Feedback visual de sucesso/erro
-- Design responsivo moderno
-
-#### `/reset-senha` - Redefinição de Senha
-- Detecção automática de sessão de recuperação
-- Hook personalizado `usePasswordReset()`
-- Formulário de nova senha com confirmação
-- Critérios de senha em tempo real
-- Estados de loading, sucesso e erro
+- Integração com permissões de admin
 
 ### 3. Serviço TypeScript
 - **Arquivo**: `src/lib/resetSenhaService.ts`

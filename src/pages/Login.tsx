@@ -154,17 +154,6 @@ export default function Login() {
                 )}
               </Button>
             </form>
-
-            <div className="text-center mt-4">
-              <Button
-                variant="ghost"
-                onClick={() => navigate('/recuperar-senha')}
-                className="text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg px-4 py-2 transition-all duration-200"
-                disabled={isLoading}
-              >
-                Esqueceu sua senha?
-              </Button>
-            </div>
           </CardContent>
         </Card>
 
