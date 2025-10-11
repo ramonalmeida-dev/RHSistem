@@ -4,6 +4,7 @@ import { useCandidatoExterno } from '../contexts/CandidatoExternoContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { Checkbox } from '../components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Loader2, User, Mail, Lock, Phone, UserPlus } from 'lucide-react';
@@ -22,6 +23,7 @@ const CandidatoRegister: React.FC = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [lgpdAccepted, setLgpdAccepted] = useState(false);
 
   const returnUrl = location.state?.returnUrl || '/';
 
@@ -56,6 +58,10 @@ const CandidatoRegister: React.FC = () => {
 
     if (!formData.telefone.trim()) {
       errors.telefone = 'Telefone é obrigatório';
+    }
+
+    if (!lgpdAccepted) {
+      errors.lgpd = 'Você deve concordar com o tratamento dos seus dados pessoais';
     }
 
     setValidationErrors(errors);
@@ -231,6 +237,29 @@ const CandidatoRegister: React.FC = () => {
                 </div>
                 {validationErrors.confirmarSenha && (
                   <p className="text-sm text-red-600">{validationErrors.confirmarSenha}</p>
+                )}
+              </div>
+
+              {/* Checkbox LGPD */}
+              <div className="space-y-3">
+                <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <Checkbox
+                    id="lgpd-consent"
+                    checked={lgpdAccepted}
+                    onCheckedChange={(checked) => setLgpdAccepted(checked as boolean)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <Label 
+                      htmlFor="lgpd-consent" 
+                      className="text-sm text-blue-800 leading-relaxed cursor-pointer"
+                    >
+                      <strong>Proteção de Dados (LGPD):</strong> Ao criar sua conta, você concorda com o tratamento dos seus dados pessoais (nome, e-mail e telefone) pela Lotusarev Consulting, exclusivamente para fins de participação em processos de recrutamento e seleção, contato profissional e comunicação sobre oportunidades compatíveis com seu perfil.
+                    </Label>
+                  </div>
+                </div>
+                {validationErrors.lgpd && (
+                  <p className="text-sm text-red-600">{validationErrors.lgpd}</p>
                 )}
               </div>
 

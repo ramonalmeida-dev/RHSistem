@@ -110,6 +110,7 @@ interface KanbanBoardProps {
   onAddCandidate?: () => void;
   onViewDetails?: (candidate: Candidate) => void;
   onSendEmail?: (candidate: Candidate) => void;
+  onViewCurriculo?: (candidate: Candidate) => void;
   onCandidatesUpdate?: (candidates: Candidate[]) => void;
   vagaId?: string;
   vagaTitulo?: string;
@@ -121,13 +122,15 @@ function CandidateCard({
   index,
   onViewDetails, 
   onSendEmail,
-  onRatingUpdate 
+  onRatingUpdate,
+  onViewCurriculo
 }: { 
   candidate: Candidate;
   index: number;
   onViewDetails?: (candidate: Candidate) => void;
   onSendEmail?: (candidate: Candidate) => void;
   onRatingUpdate?: (candidate: Candidate, newRating: number) => void;
+  onViewCurriculo?: (candidate: Candidate) => void;
 }) {
   const statusConfig = CANDIDATE_STATUSES[candidate.status];
 
@@ -258,6 +261,18 @@ function CandidateCard({
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="h-6 w-6 p-0 hover:bg-purple-50 hover:text-purple-600"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewCurriculo?.(candidate);
+                  }}
+                  title="Ver currículo"
+                >
+                  <FileText className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="h-6 w-6 p-0 hover:bg-green-50 hover:text-green-600"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -282,13 +297,15 @@ function KanbanColumn({
   candidates, 
   onViewDetails, 
   onSendEmail,
-  onRatingUpdate 
+  onRatingUpdate,
+  onViewCurriculo
 }: { 
   status: keyof typeof CANDIDATE_STATUSES;
   candidates: Candidate[];
   onViewDetails?: (candidate: Candidate) => void;
   onSendEmail?: (candidate: Candidate) => void;
   onRatingUpdate?: (candidate: Candidate, newRating: number) => void;
+  onViewCurriculo?: (candidate: Candidate) => void;
 }) {
   const statusConfig = CANDIDATE_STATUSES[status];
   const Icon = statusConfig.icon;
@@ -344,6 +361,7 @@ function KanbanColumn({
                     onViewDetails={onViewDetails}
                     onSendEmail={onSendEmail}
                     onRatingUpdate={onRatingUpdate}
+                    onViewCurriculo={onViewCurriculo}
                   />
                 ))
               )}
@@ -362,6 +380,7 @@ export function KanbanBoard({
   onAddCandidate,
   onViewDetails,
   onSendEmail,
+  onViewCurriculo,
   onCandidatesUpdate,
   vagaId,
   vagaTitulo
@@ -740,6 +759,7 @@ export function KanbanBoard({
               onViewDetails={onViewDetails}
               onSendEmail={onSendEmail}
               onRatingUpdate={handleRatingUpdate}
+              onViewCurriculo={onViewCurriculo}
             />
           ))}
         </div>

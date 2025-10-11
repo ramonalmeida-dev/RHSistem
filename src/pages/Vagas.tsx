@@ -333,6 +333,109 @@ const Vagas = () => {
     setIsEmailModalOpen(true);
   };
 
+  const handleViewCurriculo = async (candidate: Candidate) => {
+    try {
+      // Buscar dados do currículo do candidato na tabela banco_curriculos
+      const { data, error } = await supabase
+        .from('banco_curriculos')
+        .select('*')
+        .eq('candidato_id', candidate.id)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar currículo:', error);
+        toast({
+          title: "Currículo não encontrado",
+          description: "Este candidato não possui currículo cadastrado no sistema.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!data) {
+        toast({
+          title: "Currículo não encontrado",
+          description: "Este candidato não possui currículo cadastrado.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Implementar a mesma lógica de download da tela de currículos
+      // Se é arquivo não disponível
+      if (data.url_storage === 'ARQUIVO_NAO_DISPONIVEL') {
+        toast({
+          title: "Arquivo não disponível",
+          description: "Este arquivo não está disponível. Foi marcado como necessário re-upload.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Se já é uma URL completa (candidatos externos), abrir diretamente
+      if (data.url_storage.startsWith('http')) {
+        window.open(data.url_storage, '_blank');
+        toast({
+          title: "Currículo aberto",
+          description: `Currículo de ${candidate.name} aberto em nova aba.`,
+        });
+        return;
+      }
+      
+      // Para arquivos no storage do Supabase
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('curriculos')
+        .download(data.url_storage);
+      
+      if (downloadError) {
+        console.error('Erro ao baixar currículo:', downloadError);
+        
+        // Fallback: tentar URL pública
+        const { data: publicData } = supabase.storage
+          .from('curriculos')
+          .getPublicUrl(data.url_storage);
+        
+        if (publicData?.publicUrl) {
+          window.open(publicData.publicUrl, '_blank');
+          toast({
+            title: "Currículo aberto",
+            description: `Currículo de ${candidate.name} aberto em nova aba.`,
+          });
+        } else {
+          toast({
+            title: "Erro no download",
+            description: "Erro ao baixar currículo. Arquivo pode não estar disponível.",
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+      
+      // Criar blob e download
+      const url = URL.createObjectURL(fileData);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.nome_arquivo || 'curriculo.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Download concluído",
+        description: `Currículo de ${candidate.name} baixado com sucesso.`,
+      });
+      
+    } catch (error) {
+      console.error('Erro ao processar currículo:', error);
+      toast({
+        title: "Erro no download",
+        description: "Erro ao baixar currículo",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleViewKanban = async (vaga: Vaga) => {
     setSelectedVaga(vaga);
     setViewMode('kanban');
@@ -709,6 +812,7 @@ const Vagas = () => {
               onAddCandidate={handleAddCandidate}
               onViewDetails={handleViewCandidateDetails}
               onSendEmail={handleSendEmailToCandidate}
+              onViewCurriculo={handleViewCurriculo}
               onCandidatesUpdate={setSelectedVagaCandidatos}
               vagaId={selectedVaga.id}
               vagaTitulo={selectedVaga.cargo}
