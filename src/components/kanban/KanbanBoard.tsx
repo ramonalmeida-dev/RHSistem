@@ -29,23 +29,14 @@ import { useBrevoEmail } from '@/hooks/useBrevoEmail';
 import { EmailConfirmationModal } from './EmailConfirmationModal';
 
 export const CANDIDATE_STATUSES = {
-  selecionando: {
-    id: 'selecionando',
-    title: 'Selecionando',
-    icon: Users,
-    color: 'bg-blue-50 border-blue-200',
-    textColor: 'text-blue-700',
-    badgeColor: 'bg-blue-100 text-blue-800',
-    description: 'Candidatos em processo de seleção'
-  },
   curriculo_enviado: {
     id: 'curriculo_enviado',
-    title: 'CV Enviado',
+    title: 'Currículos Recebidos',
     icon: FileText,
     color: 'bg-yellow-50 border-yellow-200',
     textColor: 'text-yellow-700',
     badgeColor: 'bg-yellow-100 text-yellow-800',
-    description: 'Currículos enviados para análise'
+    description: 'Currículos recebidos para análise'
   },
   entrevista_agendada: {
     id: 'entrevista_agendada',
@@ -82,6 +73,15 @@ export const CANDIDATE_STATUSES = {
     textColor: 'text-gray-700',
     badgeColor: 'bg-gray-100 text-gray-800',
     description: 'Candidatos que desistiram'
+  },
+  selecionando: {
+    id: 'selecionando',
+    title: 'Selecionando',
+    icon: Users,
+    color: 'bg-blue-50 border-blue-200',
+    textColor: 'text-blue-700',
+    badgeColor: 'bg-blue-100 text-blue-800',
+    description: 'Candidatos em processo de seleção'
   }
 };
 
@@ -614,7 +614,7 @@ export function KanbanBoard({
   // Calcular estatísticas
   const totalCandidates = candidates.length;
   const activeCandidates = candidates.filter(c => 
-    ['selecionando', 'curriculo_enviado', 'entrevista_agendada'].includes(c.status)
+    ['curriculo_enviado', 'entrevista_agendada', 'selecionando'].includes(c.status)
   ).length;
   const approvedCandidates = candidates.filter(c => c.status === 'aprovado').length;
 

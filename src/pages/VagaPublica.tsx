@@ -643,31 +643,6 @@ const VagaPublica: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Informações complementares */}
-                    {vaga.informacoes_complementares && (
-                      <div>
-                        <h3 className="font-bold text-xl text-gray-900 mb-4 flex items-center gap-2">
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                          Informações Complementares
-                        </h3>
-                        <div className="text-gray-700 whitespace-pre-wrap leading-relaxed bg-gray-50 p-4 rounded-lg">
-                          {vaga.informacoes_complementares}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Observações */}
-                    {vaga.observacoes && (
-                      <div>
-                        <h3 className="font-bold text-xl text-gray-900 mb-4 flex items-center gap-2">
-                          <DollarSign className="h-5 w-5 text-emerald-600" />
-                          Observações
-                        </h3>
-                        <div className="text-gray-700 whitespace-pre-wrap leading-relaxed bg-gray-50 p-4 rounded-lg">
-                          {vaga.observacoes}
-                        </div>
-                      </div>
-                    )}
 
                     {/* Questionário técnico - apenas mostrar que existe */}
                     {questionario && questionario.perguntas.length > 0 && (
