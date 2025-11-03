@@ -54,6 +54,30 @@ const STATUS_LABELS = {
   CANCELADA: "Cancelada"
 };
 
+// Status e cores para as vagas
+const VAGA_STATUS_CONFIG = {
+  publicada: {
+    label: "Publicada",
+    color: "bg-green-100 text-green-800 border-green-300",
+    icon: "✓"
+  },
+  em_analise: {
+    label: "Em Análise",
+    color: "bg-blue-100 text-blue-800 border-blue-300",
+    icon: "⏳"
+  },
+  pausada: {
+    label: "Pausada",
+    color: "bg-yellow-100 text-yellow-800 border-yellow-300",
+    icon: "⏸"
+  },
+  encerrada: {
+    label: "Encerrada",
+    color: "bg-gray-100 text-gray-800 border-gray-300",
+    icon: "✕"
+  }
+};
+
 export default function StatusVagas() {
   const { usuario } = useAuth();
   const { isConsultor, podeVerTodasVagas } = usePermissions();
@@ -421,8 +445,15 @@ export default function StatusVagas() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <Building2 className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <h3 className="font-semibold text-lg">{vaga.empresa_nome}</h3>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-lg">{vaga.empresa_nome}</h3>
+                              <Badge 
+                                className={`${VAGA_STATUS_CONFIG[vaga.status]?.color || VAGA_STATUS_CONFIG.publicada.color} border px-2 py-0.5 text-xs font-medium`}
+                              >
+                                {VAGA_STATUS_CONFIG[vaga.status]?.icon} {VAGA_STATUS_CONFIG[vaga.status]?.label || vaga.status}
+                              </Badge>
+                            </div>
                             <p className="text-muted-foreground">{vaga.cargo}</p>
                             {vaga.salario && (
                               <p className="text-sm text-green-600 font-medium">💰 {vaga.salario}</p>

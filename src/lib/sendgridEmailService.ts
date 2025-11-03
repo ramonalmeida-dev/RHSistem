@@ -46,7 +46,7 @@ export interface SendEmailResponse {
 // Templates pré-definidos para diferentes contextos
 export const EMAIL_TEMPLATES = {
   CANDIDATO_APROVADO: {
-    subject: 'Parabéns! Você foi aprovado para a vaga',
+    subject: 'Parabéns – Você foi aprovado(a)!',
     getHtmlContent: (params: {
       candidatoNome: string;
       vagaTitulo: string;
@@ -58,29 +58,24 @@ export const EMAIL_TEMPLATES = {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #4f46e5; color: white; padding: 20px; text-align: center; }
+            .header { background-color: #10b981; color: white; padding: 20px; text-align: center; }
             .content { padding: 20px; background-color: #f9fafb; }
             .footer { padding: 20px; text-align: center; color: #666; }
-            .button { background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎉 Parabéns, ${params.candidatoNome}!</h1>
+              <h1>Parabéns – Você foi aprovado(a)!</h1>
             </div>
             <div class="content">
-              <p>Temos o prazer de informar que você foi <strong>aprovado</strong> para a vaga:</p>
-              <h3>${params.vagaTitulo}</h3>
-              <p><strong>Empresa:</strong> ${params.empresaNome}</p>
-              ${params.proximosPassos ? `
-                <h4>Próximos Passos:</h4>
-                <p>${params.proximosPassos}</p>
-              ` : ''}
-              <p>Em breve entraremos em contato com mais detalhes sobre o processo.</p>
+              <p>Olá, <strong>${params.candidatoNome}</strong>,</p>
+              <p>É com satisfação que informamos sua aprovação no processo seletivo para a vaga de <strong>${params.vagaTitulo}</strong>.</p>
+              <p>Parabéns pela conquista! Em breve, entraremos em contato com as informações sobre as próximas etapas para formalização da contratação.</p>
+              <p>Agradecemos pela parceria e confiança em todo o processo.</p>
             </div>
             <div class="footer">
-              <p>Atenciosamente,<br>Equipe Lotus Recruit Hub</p>
+              <p>Atenciosamente,<br><strong>LotusArev Consulting</strong></p>
             </div>
           </div>
         </body>
@@ -246,13 +241,14 @@ export const EMAIL_TEMPLATES = {
               <h1>Agradecimento por sua candidatura</h1>
             </div>
             <div class="content">
-              <p>Olá ${params.candidatoNome},</p>
-              <p>Agradecemos por ter se candidatado à vaga <strong>${params.vagaTitulo}</strong> e pelo interesse em fazer parte de nossa rede de talentos.</p>
-              <p>Após análise, seu perfil não foi selecionado para continuidade neste processo específico. No entanto, seu currículo permanecerá ativo em nosso banco de dados para futuras oportunidades compatíveis com sua experiência.</p>
-              <p>Seguimos à disposição e desejamos sucesso em sua trajetória profissional.</p>
+              <p>Prezado(a) Candidato(a),</p>
+              <p>Agradecemos por sua candidatura à posição divulgada e pelo interesse em participar dos processos conduzidos por nossa consultoria.</p>
+              <p>Todos os currículos recebidos são analisados com atenção e avaliados de acordo com os requisitos da vaga.</p>
+              <p>Caso seu perfil esteja alinhado às necessidades do nosso cliente, entraremos em contato para as próximas etapas. Caso contrário, seu currículo permanecerá em nosso banco de talentos para futuras oportunidades compatíveis com sua experiência.</p>
+              <p>Desejamos sucesso em sua trajetória profissional e agradecemos sua confiança em nosso trabalho.</p>
             </div>
             <div class="footer">
-              <p>Atenciosamente,<br>${params.consultorNome} / ${params.empresaNome}</p>
+              <p>Atenciosamente,<br><strong>Equipe LotusArev Consulting</strong></p>
             </div>
           </div>
         </body>
@@ -261,7 +257,7 @@ export const EMAIL_TEMPLATES = {
   },
 
   CANDIDATO_NAO_APROVEITADO_ENTREVISTA_CONSULTOR: {
-    subject: 'Agradecimento por sua participação no processo seletivo',
+    subject: 'Agradecimento por sua participação',
     getHtmlContent: (params: {
       candidatoNome: string;
       vagaTitulo: string;
@@ -284,13 +280,14 @@ export const EMAIL_TEMPLATES = {
               <h1>Agradecimento por sua participação</h1>
             </div>
             <div class="content">
-              <p>Olá ${params.candidatoNome},</p>
-              <p>Agradecemos por sua participação na entrevista referente à vaga <strong>${params.vagaTitulo}</strong> e pelo tempo dedicado para compartilhar sua trajetória profissional conosco.</p>
-              <p>Após avaliação, identificamos que neste momento o perfil buscado pela empresa segue em outra direção. Entretanto, seu currículo continuará ativo para futuras vagas que estejam alinhadas à sua experiência.</p>
-              <p>Foi um prazer conhecê-lo(a) e esperamos poder contar com sua participação novamente.</p>
+              <p>Olá, <strong>${params.candidatoNome}</strong>,</p>
+              <p>Agradecemos sua participação no processo seletivo para a vaga de <strong>${params.vagaTitulo}</strong>.</p>
+              <p>Após a conclusão das etapas, informamos que a empresa optou por seguir com outro(a) profissional neste momento.</p>
+              <p>Seu perfil será mantido em nosso banco de talentos para futuras oportunidades alinhadas à sua experiência.</p>
+              <p>Desejamos sucesso em sua trajetória profissional e esperamos revê-lo(a) em outros processos.</p>
             </div>
             <div class="footer">
-              <p>Atenciosamente,<br>${params.consultorNome} / ${params.empresaNome}</p>
+              <p>Atenciosamente,<br><strong>LotusArev Consulting</strong></p>
             </div>
           </div>
         </body>
@@ -299,7 +296,7 @@ export const EMAIL_TEMPLATES = {
   },
 
   CANDIDATO_NAO_APROVEITADO_ENTREVISTA_EMPRESA: {
-    subject: 'Retorno sobre o processo seletivo',
+    subject: 'Agradecimento por sua participação',
     getHtmlContent: (params: {
       candidatoNome: string;
       vagaTitulo: string;
@@ -319,16 +316,126 @@ export const EMAIL_TEMPLATES = {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Retorno sobre o processo seletivo</h1>
+              <h1>Agradecimento por sua participação</h1>
             </div>
             <div class="content">
-              <p>Olá ${params.candidatoNome},</p>
-              <p>Foi um prazer contar com sua participação nas etapas do processo seletivo para a vaga <strong>${params.vagaTitulo}</strong>.</p>
-              <p>Após criteriosa análise, informamos que, neste momento, o processo seguirá com outro(a) candidato(a). Gostaríamos de reforçar que sua experiência e competências foram muito bem avaliadas, e por isso manteremos seu currículo ativo para futuras oportunidades.</p>
-              <p>Agradecemos novamente pela disponibilidade e desejamos muito sucesso em sua carreira.</p>
+              <p>Olá, <strong>${params.candidatoNome}</strong>,</p>
+              <p>Agradecemos sua participação no processo seletivo para a vaga de <strong>${params.vagaTitulo}</strong>.</p>
+              <p>Após a conclusão das etapas, informamos que a empresa optou por seguir com outro(a) profissional neste momento.</p>
+              <p>Seu perfil será mantido em nosso banco de talentos para futuras oportunidades alinhadas à sua experiência.</p>
+              <p>Desejamos sucesso em sua trajetória profissional e esperamos revê-lo(a) em outros processos.</p>
             </div>
             <div class="footer">
-              <p>Atenciosamente,<br>${params.consultorNome} / ${params.empresaNome}</p>
+              <p>Atenciosamente,<br><strong>LotusArev Consulting</strong></p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  },
+
+  CURRICULO_RECEBIDO: {
+    subject: 'Agradecimento por sua candidatura',
+    getHtmlContent: (params: {
+      candidatoNome: string;
+      vagaTitulo: string;
+    }) => `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #4f46e5; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9fafb; }
+            .footer { padding: 20px; text-align: center; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Agradecimento por sua candidatura</h1>
+            </div>
+            <div class="content">
+              <p>Prezado(a) Candidato(a),</p>
+              <p>Agradecemos por sua candidatura à posição divulgada e pelo interesse em participar dos processos conduzidos por nossa consultoria.</p>
+              <p>Todos os currículos recebidos são analisados com atenção e avaliados de acordo com os requisitos da vaga.</p>
+              <p>Caso seu perfil esteja alinhado às necessidades do nosso cliente, entraremos em contato para as próximas etapas. Caso contrário, seu currículo permanecerá em nosso banco de talentos para futuras oportunidades compatíveis com sua experiência.</p>
+              <p>Desejamos sucesso em sua trajetória profissional e agradecemos sua confiança em nosso trabalho.</p>
+            </div>
+            <div class="footer">
+              <p>Atenciosamente,<br><strong>Equipe LotusArev Consulting</strong></p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  },
+
+  CONVITE_ENTREVISTA: {
+    subject: 'Convite para entrevista',
+    getHtmlContent: (params: {
+      candidatoNome: string;
+      vagaTitulo: string;
+    }) => `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #8b5cf6; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9fafb; }
+            .footer { padding: 20px; text-align: center; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Convite para entrevista</h1>
+            </div>
+            <div class="content">
+              <p>Olá, <strong>${params.candidatoNome}</strong>,</p>
+              <p>Gostaríamos de convidá-lo(a) para uma entrevista online (via Google Meet) referente à vaga de <strong>${params.vagaTitulo}</strong>.</p>
+              <p>Por gentileza, responda a este e-mail informando seus horários disponíveis nos próximos dias para agendarmos o melhor momento.</p>
+              <p>Ficamos à disposição para qualquer dúvida.</p>
+            </div>
+            <div class="footer">
+              <p>Atenciosamente,<br><strong>LotusArev Consulting</strong></p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  },
+
+  CV_ENVIADO_CLIENTE: {
+    subject: 'Encaminhamento de seu currículo',
+    getHtmlContent: (params: {
+      candidatoNome: string;
+      vagaTitulo: string;
+    }) => `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #3b82f6; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9fafb; }
+            .footer { padding: 20px; text-align: center; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Encaminhamento de seu currículo</h1>
+            </div>
+            <div class="content">
+              <p>Olá, <strong>${params.candidatoNome}</strong>,</p>
+              <p>Após a etapa de entrevistas conduzida pela LotusArev, informamos que seu currículo foi encaminhado para avaliação do nosso cliente, responsável pela posição de <strong>${params.vagaTitulo}</strong>.</p>
+              <p>Assim que tivermos um retorno sobre o andamento do processo, entraremos em contato.</p>
+              <p>Agradecemos novamente por sua participação e confiança.</p>
+            </div>
+            <div class="footer">
+              <p>Atenciosamente,<br><strong>LotusArev Consulting</strong></p>
             </div>
           </div>
         </body>
@@ -690,6 +797,81 @@ class SendGridEmailService {
         empresaNome: params.empresaNome
       }),
       categories: ['candidato-nao-aproveitado', 'entrevista-empresa']
+    });
+    
+    return await this.sendEmail(payload);
+  }
+
+  /**
+   * Envia email de currículo recebido (FASE 1)
+   */
+  async sendCurriculoRecebido(params: {
+    candidatoEmail: string;
+    candidatoNome: string;
+    vagaTitulo: string;
+    sender?: EmailSender;
+  }): Promise<SendEmailResponse> {
+    const template = EMAIL_TEMPLATES.CURRICULO_RECEBIDO;
+    
+    const payload = this.createSendGridPayload({
+      from: params.sender || DEFAULT_SENDER,
+      to: [{ email: params.candidatoEmail, name: params.candidatoNome }],
+      subject: template.subject,
+      htmlContent: template.getHtmlContent({
+        candidatoNome: params.candidatoNome,
+        vagaTitulo: params.vagaTitulo
+      }),
+      categories: ['curriculo-recebido', 'fase-1']
+    });
+    
+    return await this.sendEmail(payload);
+  }
+
+  /**
+   * Envia convite para entrevista (FASE 2)
+   */
+  async sendConviteEntrevista(params: {
+    candidatoEmail: string;
+    candidatoNome: string;
+    vagaTitulo: string;
+    sender?: EmailSender;
+  }): Promise<SendEmailResponse> {
+    const template = EMAIL_TEMPLATES.CONVITE_ENTREVISTA;
+    
+    const payload = this.createSendGridPayload({
+      from: params.sender || DEFAULT_SENDER,
+      to: [{ email: params.candidatoEmail, name: params.candidatoNome }],
+      subject: template.subject,
+      htmlContent: template.getHtmlContent({
+        candidatoNome: params.candidatoNome,
+        vagaTitulo: params.vagaTitulo
+      }),
+      categories: ['convite-entrevista', 'fase-2']
+    });
+    
+    return await this.sendEmail(payload);
+  }
+
+  /**
+   * Envia email de CV enviado ao cliente (FASE 3)
+   */
+  async sendCvEnviadoCliente(params: {
+    candidatoEmail: string;
+    candidatoNome: string;
+    vagaTitulo: string;
+    sender?: EmailSender;
+  }): Promise<SendEmailResponse> {
+    const template = EMAIL_TEMPLATES.CV_ENVIADO_CLIENTE;
+    
+    const payload = this.createSendGridPayload({
+      from: params.sender || DEFAULT_SENDER,
+      to: [{ email: params.candidatoEmail, name: params.candidatoNome }],
+      subject: template.subject,
+      htmlContent: template.getHtmlContent({
+        candidatoNome: params.candidatoNome,
+        vagaTitulo: params.vagaTitulo
+      }),
+      categories: ['cv-enviado-cliente', 'fase-3']
     });
     
     return await this.sendEmail(payload);

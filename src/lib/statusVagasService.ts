@@ -21,6 +21,7 @@ export interface VagaStatusRelatorio {
   cargo: string;
   consultor_nome: string; // Novo campo
   salario?: string; // Novo campo
+  status: 'publicada' | 'em_analise' | 'pausada' | 'encerrada'; // Status da vaga
   data_inicio: string;
   data_primeira_remessa: string;
   dias_processo: number;
@@ -54,6 +55,7 @@ export class StatusVagasService {
           numero_vaga,
           cargo,
           salario,
+          status,
           data_inicio_selecao,
           data_envio_curriculos,
           empresa:clientes(id, razao_social),
@@ -138,6 +140,7 @@ export class StatusVagasService {
               cargo: vaga.cargo,
               consultor_nome: (vaga.consultor as any)?.nome || 'N/A',
               salario: (vaga as any).salario,
+              status: (vaga as any).status || 'publicada',
               data_inicio: dataInicio,
               data_primeira_remessa: dataPrimeiraRemessa,
               dias_processo: diasProcesso,
@@ -158,6 +161,7 @@ export class StatusVagasService {
               cargo: vaga.cargo,
               consultor_nome: (vaga.consultor as any)?.nome || 'N/A',
               salario: (vaga as any).salario,
+              status: (vaga as any).status || 'publicada',
               data_inicio: dataInicio,
               data_primeira_remessa: dataPrimeiraRemessa,
               dias_processo: diasProcesso,

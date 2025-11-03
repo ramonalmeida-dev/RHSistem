@@ -31,30 +31,14 @@ interface EmailConfirmationModalProps {
 // Mapeamento de status para templates de email
 // Baseado no status de DESTINO e status de ORIGEM para determinar o template correto
 const getEmailConfig = (newStatus: string, oldStatus: string) => {
-  // Se movendo para REPROVADO, determinar qual template usar baseado no status anterior
+  // Se movendo para REPROVADO, usar sempre o mesmo template de agradecimento (FASE 5)
   if (newStatus === 'reprovado') {
-    if (oldStatus === 'selecionando' || oldStatus === 'curriculo_enviado') {
-      return {
-        templateType: 'triagem',
-        templateName: 'Não aproveitado - Triagem inicial',
-        description: 'Email de agradecimento para candidatos não selecionados na triagem inicial',
-        needsEmail: true
-      };
-    } else if (oldStatus === 'entrevista_agendada') {
-      return {
-        templateType: 'entrevista_consultor',
-        templateName: 'Não aproveitado - Após entrevista consultor',
-        description: 'Email para candidatos entrevistados pelo consultor mas não aprovados',
-        needsEmail: true
-      };
-    } else {
-      return {
-        templateType: 'entrevista_empresa',
-        templateName: 'Não aproveitado - Após entrevista empresa',
-        description: 'Email para candidatos que chegaram à entrevista na empresa mas não foram selecionados',
-        needsEmail: true
-      };
-    }
+    return {
+      templateType: 'reprovado',
+      templateName: 'Agradecimento por participação',
+      description: 'Email de agradecimento para candidatos não selecionados',
+      needsEmail: true
+    };
   }
 
   // Mapeamento padrão para outros status
@@ -68,26 +52,26 @@ const getEmailConfig = (newStatus: string, oldStatus: string) => {
     'aprovado': {
       templateType: 'aprovado',
       templateName: 'Candidato aprovado',
-      description: 'Email de parabéns para candidatos aprovados',
+      description: 'Email de parabéns para candidatos aprovados (FASE 4)',
       needsEmail: true
     },
     'entrevista_agendada': {
-      templateType: 'notification',
-      templateName: 'Entrevista agendada',
-      description: 'Notificação sobre agendamento de entrevista',
+      templateType: 'entrevista',
+      templateName: 'Convite para entrevista',
+      description: 'Convite para entrevista na LotusArev (FASE 2)',
       needsEmail: true
     },
     'curriculo_enviado': {
-      templateType: 'notification',
-      templateName: 'Currículo enviado',
-      description: 'Confirmação de recebimento do currículo',
-      needsEmail: false
+      templateType: 'curriculo_recebido',
+      templateName: 'Currículo recebido',
+      description: 'Confirmação de recebimento do currículo (FASE 1)',
+      needsEmail: true
     },
     'selecionando': {
-      templateType: 'notification',
-      templateName: 'Em processo de seleção',
-      description: 'Notificação sobre entrada no processo seletivo',
-      needsEmail: false
+      templateType: 'cv_enviado_cliente',
+      templateName: 'CV enviado para avaliação',
+      description: 'CV encaminhado ao cliente (FASE 3)',
+      needsEmail: true
     }
   };
 
@@ -145,43 +129,52 @@ export function EmailConfirmationModal({
         let emailResult;
 
         switch (emailConfig.templateType) {
-          case 'triagem':
-            emailResult = await sendgridEmailService.sendCandidatoNaoAproveitadoTriagem({
+          case 'curriculo_recebido':
+            // FASE 1 - Recebimento do Currículo
+            emailResult = await sendgridEmailService.sendCurriculoRecebido({
               candidatoEmail: candidate.email,
               candidatoNome: candidate.name,
-              vagaTitulo,
-              consultorNome,
-              empresaNome
+              vagaTitulo
             });
             break;
 
-          case 'entrevista_consultor':
-            emailResult = await sendgridEmailService.sendCandidatoNaoAproveitadoEntrevistaConsultor({
+          case 'entrevista':
+            // FASE 2 - Convite para Entrevista
+            emailResult = await sendgridEmailService.sendConviteEntrevista({
               candidatoEmail: candidate.email,
               candidatoNome: candidate.name,
-              vagaTitulo,
-              consultorNome,
-              empresaNome
+              vagaTitulo
             });
             break;
 
-          case 'entrevista_empresa':
-            emailResult = await sendgridEmailService.sendCandidatoNaoAproveitadoEntrevistaEmpresa({
+          case 'cv_enviado_cliente':
+            // FASE 3 - CV Enviado para Avaliação do Cliente
+            emailResult = await sendgridEmailService.sendCvEnviadoCliente({
               candidatoEmail: candidate.email,
               candidatoNome: candidate.name,
-              vagaTitulo,
-              consultorNome,
-              empresaNome
+              vagaTitulo
             });
             break;
 
           case 'aprovado':
+            // FASE 4 - Comunicado de Aprovação
             emailResult = await sendgridEmailService.sendCandidatoAprovado({
               candidatoEmail: candidate.email,
               candidatoNome: candidate.name,
               vagaTitulo,
               empresaNome,
               proximosPassos: 'Em breve entraremos em contato com os próximos passos.'
+            });
+            break;
+
+          case 'reprovado':
+            // FASE 5 - Agradecimento por Participação
+            emailResult = await sendgridEmailService.sendCandidatoNaoAproveitadoEntrevistaConsultor({
+              candidatoEmail: candidate.email,
+              candidatoNome: candidate.name,
+              vagaTitulo,
+              consultorNome,
+              empresaNome
             });
             break;
 
