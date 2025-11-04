@@ -68,20 +68,24 @@ export function EmailModal({
 
     const templates = {
       agradecimento: {
-        subject: `Agradecimento - Candidatura ${vagaCargo}`,
-        body: `Olá ${candidate.name},\n\nAgradecemos sua candidatura para a vaga de ${vagaCargo} na ${vagaEmpresa}.\n\nSeu currículo está sendo analisado e entraremos em contato em breve.\n\nAtenciosamente,\nEquipe de Recrutamento`
+        subject: `Agradecimento por sua candidatura`,
+        body: `Prezado(a) ${candidate.name},\n\nAgradecemos por sua candidatura à posição divulgada e pelo interesse em participar dos processos conduzidos por nossa consultoria.\n\nTodos os currículos recebidos são analisados com atenção e avaliados de acordo com os requisitos da vaga.\n\nCaso seu perfil esteja alinhado às necessidades do nosso cliente, entraremos em contato para as próximas etapas. Caso contrário, seu currículo permanecerá em nosso banco de talentos para futuras oportunidades compatíveis com sua experiência.\n\nDesejamos sucesso em sua trajetória profissional e agradecemos sua confiança em nosso trabalho.\n\nAtenciosamente,\nEquipe LotusArev Consulting`
       },
       entrevista: {
-        subject: `Agendamento de Entrevista - ${vagaCargo}`,
-        body: `Olá ${candidate.name},\n\nGostaríamos de agendar uma entrevista para a vaga de ${vagaCargo} na ${vagaEmpresa}.\n\nPor favor, responda este email com sua disponibilidade para os próximos dias.\n\nAtenciosamente,\nEquipe de Recrutamento`
+        subject: `Convite para entrevista – ${vagaCargo}`,
+        body: `Olá, ${candidate.name},\n\nGostaríamos de convidá-lo(a) para uma entrevista online (via Google Meet) referente à vaga de ${vagaCargo}.\n\nPor gentileza, responda a este e-mail informando seus horários disponíveis nos próximos dias para agendarmos o melhor momento.\n\nFicamos à disposição para qualquer dúvida.\n\nAtenciosamente,\nLotusArev Consulting`
+      },
+      cv_enviado_cliente: {
+        subject: `Encaminhamento de seu currículo – ${vagaCargo}`,
+        body: `Olá, ${candidate.name},\n\nApós a etapa de entrevistas conduzida pela LotusArev, informamos que seu currículo foi encaminhado para avaliação do nosso cliente, responsável pela posição de ${vagaCargo}.\n\nAssim que tivermos um retorno sobre o andamento do processo, entraremos em contato.\n\nAgradecemos novamente por sua participação e confiança.\n\nAtenciosamente,\nLotusArev Consulting`
       },
       aprovacao: {
-        subject: `Parabéns! Você foi aprovado(a) - ${vagaCargo}`,
-        body: `Olá ${candidate.name},\n\nTemos o prazer de informar que você foi aprovado(a) para a vaga de ${vagaCargo} na ${vagaEmpresa}!\n\nEntraremos em contato em breve com os próximos passos.\n\nParabéns!\nEquipe de Recrutamento`
+        subject: `Parabéns – Você foi aprovado(a)!`,
+        body: `Olá, ${candidate.name},\n\nÉ com satisfação que informamos sua aprovação no processo seletivo para a vaga de ${vagaCargo} na empresa ${vagaEmpresa}.\n\nParabéns pela conquista! Em breve, entraremos em contato com as informações sobre as próximas etapas para formalização da contratação.\n\nAgradecemos pela parceria e confiança em todo o processo.\n\nAtenciosamente,\nLotusArev Consulting`
       },
       reprovacao: {
-        subject: `Retorno sobre sua candidatura - ${vagaCargo}`,
-        body: `Olá ${candidate.name},\n\nAgradecemos seu interesse na vaga de ${vagaCargo} na ${vagaEmpresa}.\n\nInfelizmente, não poderemos prosseguir com sua candidatura neste momento.\n\nDesejamos sucesso em suas próximas oportunidades.\n\nAtenciosamente,\nEquipe de Recrutamento`
+        subject: `Agradecimento por sua participação – ${vagaCargo}`,
+        body: `Olá, ${candidate.name},\n\nAgradecemos sua participação no processo seletivo para a vaga de ${vagaCargo} junto à empresa ${vagaEmpresa}.\n\nApós a conclusão das etapas, informamos que a empresa optou por seguir com outro(a) profissional neste momento.\n\nSeu perfil será mantido em nosso banco de talentos para futuras oportunidades alinhadas à sua experiência.\n\nDesejamos sucesso em sua trajetória profissional e esperamos revê-lo(a) em outros processos.\n\nAtenciosamente,\nLotusArev Consulting`
       },
       personalizado: {
         subject: emailData.subject,
@@ -166,10 +170,11 @@ export function EmailModal({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="personalizado">Personalizado</SelectItem>
-                <SelectItem value="agradecimento">Agradecimento</SelectItem>
-                <SelectItem value="entrevista">Agendamento de Entrevista</SelectItem>
-                <SelectItem value="aprovacao">Aprovação</SelectItem>
-                <SelectItem value="reprovacao">Reprovação</SelectItem>
+                <SelectItem value="agradecimento">FASE 1 - Recebimento do Currículo</SelectItem>
+                <SelectItem value="entrevista">FASE 2 - Seleção e Entrevista na LotusArev</SelectItem>
+                <SelectItem value="cv_enviado_cliente">FASE 3 - CV Enviado para Avaliação do Cliente</SelectItem>
+                <SelectItem value="aprovacao">FASE 4 - Comunicado de Aprovação</SelectItem>
+                <SelectItem value="reprovacao">FASE 5 - Agradecimento por Participação</SelectItem>
               </SelectContent>
             </Select>
           </div>
