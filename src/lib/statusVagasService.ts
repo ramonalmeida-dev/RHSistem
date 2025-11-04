@@ -345,8 +345,49 @@ export class StatusVagasService {
             .company-title { 
               font-size: 16px; 
               font-weight: bold; 
-              margin-bottom: 20px;
+              margin-bottom: 10px;
               color: #2c3e50;
+            }
+            .vaga-info {
+              background-color: #f8f9fa;
+              padding: 12px;
+              margin-bottom: 15px;
+              border-radius: 6px;
+              border-left: 4px solid #2c3e50;
+            }
+            .vaga-item {
+              font-size: 12px;
+              color: #333;
+              margin-bottom: 6px;
+              line-height: 1.8;
+              display: flex;
+              align-items: center;
+            }
+            .vaga-item:last-child {
+              margin-bottom: 0;
+            }
+            .vaga-numero {
+              font-weight: bold;
+              color: #2c3e50;
+              min-width: 70px;
+              display: inline-block;
+            }
+            .vaga-cargo {
+              color: #555;
+              flex: 1;
+            }
+            .status-badge {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              padding: 4px 10px 10px 10px;
+              border-radius: 3px;
+              font-size: 9px;
+              font-weight: bold;
+              margin-left: 8px;
+              text-transform: uppercase;
+              line-height: 1;
+              vertical-align: middle;
             }
             table { 
               width: 100%; 
@@ -381,23 +422,28 @@ export class StatusVagasService {
             .status-admitido { background-color: #e0f2f1; color: #00695c; font-weight: bold; }
             .status-suspensa { background-color: #fce4ec; color: #e91e63; font-weight: bold; }
             .status-cancelada { background-color: #f5f5f5; color: #424242; font-weight: bold; }
+            .vaga-status-publicada { background-color: #e8f5e8; color: #2e7d32; font-weight: bold; }
+            .vaga-status-em-analise { background-color: #e3f2fd; color: #1565c0; font-weight: bold; }
+            .vaga-status-pausada { background-color: #fff3e0; color: #f57c00; font-weight: bold; }
+            .vaga-status-encerrada { background-color: #f5f5f5; color: #424242; font-weight: bold; }
             .vaga-row { background-color: #f8f9fa; font-weight: bold; }
             .candidato-row { background-color: white; }
             .empty-cell { color: #999; font-style: italic; text-align: center; }
             .candidato-nome { text-align: center; font-weight: 500; }
             .status-cell { text-align: center; font-weight: bold; }
-            .empresa-col { width: 12%; text-align: center; }
-            .cargo-col { width: 14%; text-align: center; }
-            .consultor-col { width: 10%; text-align: center; }
-            .salario-col { width: 8%; text-align: center; }
-            .vaga-col { width: 6%; text-align: center; }
+            .empresa-col { width: 11%; text-align: center; }
+            .cargo-col { width: 13%; text-align: center; }
+            .status-vaga-col { width: 8%; text-align: center; }
+            .consultor-col { width: 9%; text-align: center; }
+            .salario-col { width: 7%; text-align: center; }
+            .vaga-col { width: 5%; text-align: center; }
             .data-col { width: 6%; text-align: center; }
-            .dias-col { width: 5%; text-align: center; }
-            .num-enviados-col { width: 6%; text-align: center; }
-            .candidato-col { width: 12%; text-align: center; }
-            .status-col { width: 8%; text-align: center; }
+            .dias-col { width: 4%; text-align: center; }
+            .num-enviados-col { width: 5%; text-align: center; }
+            .candidato-col { width: 11%; text-align: center; }
+            .status-col { width: 7%; text-align: center; }
             .data-status-col { width: 6%; text-align: center; }
-            .dias-status-col { width: 5%; text-align: center; }
+            .dias-status-col { width: 4%; text-align: center; }
           </style>
         </head>
         <body>
@@ -416,6 +462,24 @@ export class StatusVagasService {
         htmlContent += `
           <div class="company-section">
             <div class="company-title">STATUS DE VAGAS – ${empresa}</div>
+            <div class="vaga-info">
+        `;
+        
+        // Adicionar informações de status para cada vaga
+        vagasEmpresa.forEach((vaga, index) => {
+          const statusLabel = this.getVagaStatusLabel(vaga.status);
+          const statusClass = this.getVagaStatusClass(vaga.status);
+          htmlContent += `
+              <div class="vaga-item">
+                <span class="vaga-numero">Vaga #${vaga.numero_vaga}</span>
+                <span class="vaga-cargo">${vaga.cargo}</span>
+                <span class="status-badge ${statusClass}">${statusLabel}</span>
+              </div>
+          `;
+        });
+        
+        htmlContent += `
+            </div>
             <table>
               <thead>
                 <tr>
@@ -539,6 +603,26 @@ export class StatusVagasService {
       case 'ADMITIDO': return 'status-admitido';
       case 'SUSPENSA': return 'status-suspensa';
       case 'CANCELADA': return 'status-cancelada';
+      default: return '';
+    }
+  }
+
+  private static getVagaStatusLabel(status: string): string {
+    switch (status) {
+      case 'publicada': return 'Publicada';
+      case 'em_analise': return 'Em Análise';
+      case 'pausada': return 'Pausada';
+      case 'encerrada': return 'Encerrada';
+      default: return status;
+    }
+  }
+
+  private static getVagaStatusClass(status: string): string {
+    switch (status) {
+      case 'publicada': return 'vaga-status-publicada';
+      case 'em_analise': return 'vaga-status-em-analise';
+      case 'pausada': return 'vaga-status-pausada';
+      case 'encerrada': return 'vaga-status-encerrada';
       default: return '';
     }
   }
