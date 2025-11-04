@@ -29,6 +29,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { StatusVagaModal } from "@/components/relatorios/StatusVagaModal";
 
 const STATUS_COLORS = {
   AGUARDANDO: "bg-yellow-100 text-yellow-800",
@@ -92,6 +93,8 @@ export default function StatusVagas() {
     consultor_id: "todos"
   });
   const [error, setError] = useState<string | null>(null);
+  const [vagaSelecionada, setVagaSelecionada] = useState<VagaStatusRelatorio | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -222,6 +225,11 @@ export default function StatusVagas() {
 
   const clearFilters = () => {
     setFilters({});
+  };
+
+  const handleVisualizarVaga = (vaga: VagaStatusRelatorio) => {
+    setVagaSelecionada(vaga);
+    setModalOpen(true);
   };
 
   // Estatísticas
@@ -482,13 +490,23 @@ export default function StatusVagas() {
                       
                       <div className="flex flex-col gap-2 ml-4">
                         <Button
+                          onClick={() => handleVisualizarVaga(vaga)}
+                          size="sm"
+                          variant="outline"
+                          className="flex items-center gap-2"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Visualizar
+                        </Button>
+                        
+                        <Button
                           onClick={() => handleExportPDF([vaga])}
                           disabled={exportLoading}
                           size="sm"
                           variant="outline"
                           className="flex items-center gap-2"
                         >
-                          <FileText className="h-4 w-4" />
+                          <Download className="h-4 w-4" />
                           PDF
                         </Button>
                         
@@ -505,6 +523,13 @@ export default function StatusVagas() {
             </div>
           )}
         </div>
+
+        {/* Modal de Visualização */}
+        <StatusVagaModal
+          vaga={vagaSelecionada}
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+        />
       </div>
     </MainLayout>
   );

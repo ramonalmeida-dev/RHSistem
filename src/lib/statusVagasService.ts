@@ -275,34 +275,30 @@ export class StatusVagasService {
     return undefined;
   }
 
-  static async exportToPDF(vagasEspecificas?: VagaStatusRelatorio[]): Promise<void> {
-    try {
-      // Importar html2pdf dinamicamente
-      const html2pdf = (await import('html2pdf.js')).default;
+  static async generateHTMLContent(vagasEspecificas?: VagaStatusRelatorio[]): Promise<string> {
+    const vagas = vagasEspecificas || await this.list();
+    if (!vagas || vagas.length === 0) {
+      throw new Error('Nenhuma vaga encontrada para gerar relatório');
+    }
 
-      const vagas = vagasEspecificas || await this.list();
-      if (!vagas || vagas.length === 0) {
-        throw new Error('Nenhuma vaga encontrada para exportar');
+    // Verificar se vagas é um array
+    if (!Array.isArray(vagas)) {
+      console.error('Vagas não é um array:', vagas);
+      throw new Error('Formato de dados inválido');
+    }
+
+    // Agrupar vagas por empresa
+    const vagasPorEmpresa = vagas.reduce((acc, vaga) => {
+      const empresa = vaga.empresa_nome;
+      if (!acc[empresa]) {
+        acc[empresa] = [];
       }
+      acc[empresa].push(vaga);
+      return acc;
+    }, {} as Record<string, VagaStatusRelatorio[]>);
 
-      // Verificar se vagas é um array
-      if (!Array.isArray(vagas)) {
-        console.error('Vagas não é um array:', vagas);
-        throw new Error('Formato de dados inválido');
-      }
-
-      // Agrupar vagas por empresa
-      const vagasPorEmpresa = vagas.reduce((acc, vaga) => {
-        const empresa = vaga.empresa_nome;
-        if (!acc[empresa]) {
-          acc[empresa] = [];
-        }
-        acc[empresa].push(vaga);
-        return acc;
-      }, {} as Record<string, VagaStatusRelatorio[]>);
-
-      // Criar HTML para o PDF
-      let htmlContent = `
+    // Criar HTML para o relatório
+    let htmlContent = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -564,6 +560,17 @@ export class StatusVagasService {
         </body>
         </html>
       `;
+
+    return htmlContent;
+  }
+
+  static async exportToPDF(vagasEspecificas?: VagaStatusRelatorio[]): Promise<void> {
+    try {
+      // Importar html2pdf dinamicamente
+      const html2pdf = (await import('html2pdf.js')).default;
+
+      // Gerar HTML
+      const htmlContent = await this.generateHTMLContent(vagasEspecificas);
 
       // Criar elemento temporário para o HTML
       const element = document.createElement('div');
