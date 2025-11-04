@@ -73,7 +73,7 @@ export function EmailModal({
       },
       entrevista: {
         subject: `Convite para entrevista – ${vagaCargo}`,
-        body: `Olá, ${candidate.name},\n\nGostaríamos de convidá-lo(a) para uma entrevista online (via Google Meet) referente à vaga de ${vagaCargo}.\n\nPor gentileza, responda a este e-mail informando seus horários disponíveis nos próximos dias para agendarmos o melhor momento.\n\nFicamos à disposição para qualquer dúvida.\n\nAtenciosamente,\nLotusArev Consulting`
+        body: `Olá, ${candidate.name},\n\nGostaríamos de convidá-lo(a) para uma entrevista online (Microsoft Teams) referente à vaga de ${vagaCargo}.\n\nPor gentileza, responda a este e-mail informando seus horários disponíveis nos próximos dias para agendarmos o melhor momento.\n\nFicamos à disposição para qualquer dúvida.\n\nAtenciosamente,\nLotusArev Consulting`
       },
       cv_enviado_cliente: {
         subject: `Encaminhamento de seu currículo – ${vagaCargo}`,
