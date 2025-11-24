@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { 
   Briefcase, 
   Building2, 
@@ -55,7 +56,7 @@ interface VagaData {
   perfilWord: string;
   informacoesComplementares: string;
   observacoes: string;
-  consultorId: string;
+  consultoresIds: string[];
   perguntasQuestionario: PerguntaQuestionario[];
 }
 
@@ -121,7 +122,7 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
     perfilWord: "",
     informacoesComplementares: "",
     observacoes: "",
-    consultorId: "",
+    consultoresIds: [],
     perguntasQuestionario: [],
   });
 
@@ -193,6 +194,30 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
   useEffect(() => {
     const loadFormData = async () => {
       if (vaga) {
+        // Carregar consultores da vaga
+        let consultoresIds: string[] = [];
+        try {
+          const { data: consultoresData, error: consultoresError } = await supabase
+            .from('vagas_consultores')
+            .select('consultor_id')
+            .eq('vaga_id', vaga.id);
+          
+          if (consultoresError) throw consultoresError;
+          
+          if (consultoresData && consultoresData.length > 0) {
+            consultoresIds = consultoresData.map(c => c.consultor_id);
+          } else if (vaga.consultor_id) {
+            // Fallback para consultor_id antigo se não houver na nova tabela
+            consultoresIds = [vaga.consultor_id];
+          }
+        } catch (error) {
+          console.error('Erro ao carregar consultores:', error);
+          // Fallback para consultor_id antigo
+          if (vaga.consultor_id) {
+            consultoresIds = [vaga.consultor_id];
+          }
+        }
+
         // Carregar questionário existente se houver
         let perguntasQuestionario: PerguntaQuestionario[] = [];
         try {
@@ -219,7 +244,7 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
           perfilWord: vaga.perfil_word || "",
           informacoesComplementares: vaga.informacoes_complementares || "",
           observacoes: vaga.observacoes || "",
-          consultorId: vaga.consultor_id,
+          consultoresIds: consultoresIds,
           perguntasQuestionario,
         });
       }
@@ -259,8 +284,8 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
       newErrors.dataRecebimento = "Data de recebimento é obrigatória";
     }
 
-    if (!formData.consultorId || formData.consultorId === "") {
-      newErrors.consultorId = "Consultor é obrigatório" as any;
+    if (!formData.consultoresIds || formData.consultoresIds.length === 0) {
+      newErrors.consultoresIds = "Pelo menos um consultor é obrigatório" as any;
     }
 
     // Validar questionário se houver perguntas
@@ -596,33 +621,24 @@ export function EditVagaModal({ isOpen, onClose, onSubmit, vaga }: EditVagaModal
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">Configurações da Vaga</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="consultorId" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Consultor Responsável *
-                </Label>
-                <Select
-                  value={formData.consultorId}
-                  onValueChange={(value) => {
-                    handleInputChange("consultorId", value);
-                  }}
-                >
-                  <SelectTrigger className={errors.consultorId ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Selecione o consultor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {usuarios.map((usuario) => (
-                      <SelectItem key={usuario.id} value={usuario.id}>
-                        {usuario.nome} ({usuario.tipo === 'admin' ? 'Administrador' : 'Consultor'})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.consultorId && (
-                  <p className="text-sm text-destructive">{errors.consultorId}</p>
-                )}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="consultoresIds" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Consultores Responsáveis *
+              </Label>
+              <MultiSelect
+                options={usuarios.map((usuario) => ({
+                  value: usuario.id,
+                  label: `${usuario.nome} (${usuario.tipo === 'admin' ? 'Administrador' : 'Consultor'})`
+                }))}
+                selected={formData.consultoresIds}
+                onChange={(values) => handleInputChange("consultoresIds", values)}
+                placeholder="Selecione um ou mais consultores"
+                className={errors.consultoresIds ? "border-destructive" : ""}
+              />
+              {errors.consultoresIds && (
+                <p className="text-sm text-destructive">{errors.consultoresIds}</p>
+              )}
             </div>
           </div>
 

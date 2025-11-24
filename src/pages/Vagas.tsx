@@ -88,6 +88,10 @@ interface Vaga {
     nome: string;
     email: string;
   };
+  consultores?: Array<{
+    nome: string;
+    email: string;
+  }>;
   status: VagaStatus;
   substatus?: VagaSubstatus;
   created_at: string;
@@ -211,21 +215,56 @@ const Vagas = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Carregar vagas com empresas
+      const { data: vagasData, error: vagasError } = await supabase
         .from('vagas')
         .select(`
           *,
-          empresa:clientes(razao_social, cnpj),
-          consultor:usuarios(nome, email)
+          empresa:clientes(razao_social, cnpj)
         `)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Erro na consulta de vagas:', error);
-        throw error;
+      if (vagasError) {
+        console.error('Erro na consulta de vagas:', vagasError);
+        throw vagasError;
       }
+
+      // Carregar consultores de cada vaga
+      const vagasComConsultores = await Promise.all(
+        (vagasData || []).map(async (vaga) => {
+          const { data: consultoresData } = await supabase
+            .from('vagas_consultores')
+            .select(`
+              consultor_id,
+              usuarios!inner(nome, email)
+            `)
+            .eq('vaga_id', vaga.id);
+
+          // Se não houver consultores na nova tabela, tentar carregar do consultor_id antigo
+          let consultores = consultoresData?.map(c => c.usuarios) || [];
+          
+          if (consultores.length === 0 && vaga.consultor_id) {
+            const { data: consultorAntigo } = await supabase
+              .from('usuarios')
+              .select('nome, email')
+              .eq('id', vaga.consultor_id)
+              .single();
+            
+            if (consultorAntigo) {
+              consultores = [consultorAntigo];
+            }
+          }
+
+          return {
+            ...vaga,
+            consultores: consultores,
+            // Manter compatibilidade com código antigo
+            consultor: consultores[0] || null
+          };
+        })
+      );
       
-      setVagas(data || []);
+      setVagas(vagasComConsultores);
     } catch (error) {
       console.error('Erro ao carregar vagas:', error);
       toast({
@@ -251,8 +290,8 @@ const Vagas = () => {
     // Buscar na empresa
     if (vaga.empresa?.razao_social.toLowerCase().includes(searchTermClean)) return true;
     
-    // Buscar no consultor
-    if (vaga.consultor?.nome.toLowerCase().includes(searchTermClean)) return true;
+    // Buscar nos consultores
+    if (vaga.consultores?.some(c => c.nome.toLowerCase().includes(searchTermClean))) return true;
     
     return false;
   }).filter(vaga => {
@@ -262,8 +301,15 @@ const Vagas = () => {
     // Filtro por empresa
     if (empresaFilter !== 'todas' && vaga.empresa_id.toString() !== empresaFilter) return false;
     
-    // Filtro por consultor
-    if (consultorFilter !== 'todos' && vaga.consultor_id.toString() !== consultorFilter) return false;
+    // Filtro por consultor - verifica se algum dos consultores da vaga corresponde ao filtro
+    if (consultorFilter !== 'todos') {
+      const temConsultor = vaga.consultores?.some(c => {
+        // Buscar o ID do consultor comparando com o nome
+        const consultorEncontrado = consultoresUnicos.find(cu => cu.nome === c.nome);
+        return consultorEncontrado?.id === consultorFilter;
+      });
+      if (!temConsultor) return false;
+    }
     
     // Filtro por data de recebimento
     if (dataInicioFilter && vaga.data_recebimento < dataInicioFilter) return false;
@@ -457,6 +503,7 @@ const Vagas = () => {
         return dateString && dateString.trim() !== '' ? dateString : null;
       };
 
+      // Criar a vaga
       const { data, error } = await supabase
         .from('vagas')
         .insert({
@@ -477,17 +524,32 @@ const Vagas = () => {
           perfil_word: vagaData.perfilWord,
           informacoes_complementares: vagaData.informacoesComplementares,
           observacoes: vagaData.observacoes,
-          consultor_id: vagaData.consultorId,
+          consultor_id: vagaData.consultoresIds?.[0] || null, // Manter compatibilidade
           status: 'publicada'
         })
         .select(`
           *,
-          empresa:clientes(razao_social, cnpj),
-          consultor:usuarios(nome, email)
+          empresa:clientes(razao_social, cnpj)
         `)
         .single();
 
       if (error) throw error;
+
+      // Inserir consultores na tabela vagas_consultores
+      if (vagaData.consultoresIds && vagaData.consultoresIds.length > 0) {
+        const consultoresInsert = vagaData.consultoresIds.map((consultorId: string) => ({
+          vaga_id: data.id,
+          consultor_id: consultorId
+        }));
+
+        const { error: consultoresError } = await supabase
+          .from('vagas_consultores')
+          .insert(consultoresInsert);
+
+        if (consultoresError) {
+          console.error('Erro ao inserir consultores:', consultoresError);
+        }
+      }
 
       // Salvar questionário se houver perguntas
       if (vagaData.perguntasQuestionario && vagaData.perguntasQuestionario.length > 0) {
@@ -504,11 +566,8 @@ const Vagas = () => {
         }
       }
 
-      // Adicionar a nova vaga ao estado e limpar filtros para garantir que apareça
-      setVagas(prev => {
-        const newVagas = [data, ...prev];
-        return newVagas;
-      });
+      // Recarregar vagas para pegar os dados completos incluindo consultores
+      await loadVagas();
       
       // Limpar filtros para garantir que a nova vaga apareça
       setSearchTerm('');
@@ -552,6 +611,7 @@ const Vagas = () => {
         return dateString && dateString.trim() !== '' ? dateString : null;
       };
 
+      // Atualizar a vaga
       const { data, error } = await supabase
         .from('vagas')
         .update({
@@ -573,19 +633,43 @@ const Vagas = () => {
           informacoes_complementares: vagaData.informacoesComplementares,
           questionario_tecnico: vagaData.questionarioTecnico,
           observacoes: vagaData.observacoes,
-          consultor_id: vagaData.consultorId,
+          consultor_id: vagaData.consultoresIds?.[0] || null, // Manter compatibilidade
         })
         .eq('id', selectedVaga.id)
         .select(`
           *,
-          empresa:clientes(razao_social, cnpj),
-          consultor:usuarios(nome, email)
+          empresa:clientes(razao_social, cnpj)
         `)
         .single();
 
       if (error) throw error;
 
-      setVagas(prev => prev.map(v => v.id === selectedVaga.id ? data : v));
+      // Atualizar consultores na tabela vagas_consultores
+      // 1. Deletar consultores existentes
+      await supabase
+        .from('vagas_consultores')
+        .delete()
+        .eq('vaga_id', selectedVaga.id);
+
+      // 2. Inserir novos consultores
+      if (vagaData.consultoresIds && vagaData.consultoresIds.length > 0) {
+        const consultoresInsert = vagaData.consultoresIds.map((consultorId: string) => ({
+          vaga_id: selectedVaga.id,
+          consultor_id: consultorId
+        }));
+
+        const { error: consultoresError } = await supabase
+          .from('vagas_consultores')
+          .insert(consultoresInsert);
+
+        if (consultoresError) {
+          console.error('Erro ao atualizar consultores:', consultoresError);
+        }
+      }
+
+      // Recarregar vagas para pegar os dados completos
+      await loadVagas();
+      
       setIsEditModalOpen(false);
       setSelectedVaga(null);
       
@@ -753,13 +837,17 @@ const Vagas = () => {
     };
   });
 
-  const consultoresUnicos = Array.from(new Set(vagas.map(v => v.consultor_id))).map(id => {
-    const vaga = vagas.find(v => v.consultor_id === id);
-    return {
-      id: id.toString(),
-      nome: vaga?.consultor?.nome || 'Consultor não encontrado'
-    };
-  });
+  // Extrair todos os consultores únicos de todas as vagas
+  const todosConsultores = vagas.flatMap(v => 
+    v.consultores?.map(c => ({ nome: c.nome, email: c.email })) || []
+  );
+  
+  const consultoresUnicos = Array.from(
+    new Map(todosConsultores.map(c => [c.nome, c])).values()
+  ).map((consultor, index) => ({
+    id: `consultor-${index}`,
+    nome: consultor.nome
+  }));
 
   return (
     <MainLayout>
@@ -1100,7 +1188,9 @@ const Vagas = () => {
                                 </div>
                               </td>
                               <td className="p-3 text-sm text-muted-foreground">
-                                {vaga.consultor?.nome || '-'}
+                                {vaga.consultores && vaga.consultores.length > 0 
+                                  ? vaga.consultores.map(c => c.nome).join(', ')
+                                  : '-'}
                               </td>
                               <td className="p-3">
                                 {getStatusBadge(vaga)}
