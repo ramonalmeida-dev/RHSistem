@@ -11,6 +11,7 @@ export interface BancoCurriculo {
   url_storage: string;
   tamanho_bytes: number;
   tipo_arquivo?: string;
+  cargo_interesse?: string;
   area_atuacao?: string;
   experiencia_anos?: number;
   formacao?: string;
@@ -41,6 +42,7 @@ export interface CreateBancoCurriculo {
   url_storage: string;
   tamanho_bytes: number;
   tipo_arquivo?: string;
+  cargo_interesse?: string;
   area_atuacao?: string;
   experiencia_anos?: number;
   formacao?: string;
@@ -59,6 +61,7 @@ export interface UpdateBancoCurriculo {
   url_storage?: string;
   tamanho_bytes?: number;
   tipo_arquivo?: string;
+  cargo_interesse?: string;
   area_atuacao?: string;
   experiencia_anos?: number;
   formacao?: string;
@@ -74,6 +77,7 @@ export interface UpdateBancoCurriculo {
 
 export interface BancoCurriculoFilters {
   candidato_id?: string;
+  cargo_interesse?: string;
   area_atuacao?: string;
   disponibilidade?: DisponibilidadeCandidato;
   status?: CandidatoBancoStatus;

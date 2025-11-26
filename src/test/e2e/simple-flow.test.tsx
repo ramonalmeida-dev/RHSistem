@@ -157,7 +157,7 @@ describe('Fluxo Completo da Aplicação - Teste Simples', () => {
       console.log('  ✅ Vaga → Desenvolvedor React Senior com questionário');
       console.log('  ✅ Candidato → Pedro Candidato E2E registrado');
       console.log('  ✅ Candidatura → Realizada com questionário respondido');
-      console.log('  ✅ Kanban → Candidato aparecerá na coluna "Selecionando"');
+      console.log('  ✅ Kanban → Candidato aparecerá na coluna "Em seleção"');
       console.log('  ✅ Dashboard → Candidatura aparecerá na lista do candidato');
     });
 

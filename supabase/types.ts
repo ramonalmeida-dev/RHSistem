@@ -128,6 +128,7 @@ export interface BancoCurriculo {
   url_storage: string;
   tamanho_bytes: number;
   tipo_arquivo?: string;
+  cargo_interesse?: string;
   area_atuacao?: string;
   experiencia_anos?: number;
   formacao?: string;

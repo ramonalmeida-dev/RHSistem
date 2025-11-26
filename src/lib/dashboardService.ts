@@ -247,9 +247,9 @@ export class DashboardService {
       };
 
       const statusNames: { [key: string]: string } = {
-        'selecionando': 'Selecionando',
+        'selecionando': 'Em seleção',
         'curriculo_enviado': 'CV Enviado',
-        'entrevista_agendada': 'Entrevista Agendada',
+        'entrevista_agendada': 'Entrevista na empresa',
         'entrevista_realizada': 'Entrevista Realizada',
         'aprovado': 'Aprovado',
         'reprovado': 'Reprovado',

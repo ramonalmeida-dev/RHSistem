@@ -25,6 +25,7 @@ interface CurriculoData {
   nome: string;
   email: string;
   telefone: string;
+  cargo: string;
   area_atuacao: string;
   experiencia_anos: number;
   formacao: string;
@@ -42,6 +43,7 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
     nome: "",
     email: "",
     telefone: "",
+    cargo: "",
     area_atuacao: "",
     experiencia_anos: 0,
     formacao: "",
@@ -99,6 +101,7 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
           p_nome: formData.nome,
           p_email: formData.email,
           p_telefone: formData.telefone,
+          p_cargo: formData.cargo || null,
           p_area_atuacao: formData.area_atuacao || null,
           p_experiencia_anos: formData.experiencia_anos,
           p_formacao: formData.formacao || null,
@@ -133,6 +136,7 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
         nome: "",
         email: "",
         telefone: "",
+        cargo: "",
         area_atuacao: "",
         experiencia_anos: 0,
         formacao: "",
@@ -274,6 +278,22 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
           {/* Informações Profissionais */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Informações Profissionais</h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="cargo">
+                Cargo
+                <span className="text-xs text-gray-500 ml-2">
+                  (Ex: Analista de Marketing Pleno, Desenvolvedor Full Stack, Designer UI/UX)
+                </span>
+              </Label>
+              <Input
+                id="cargo"
+                value={formData.cargo}
+                onChange={(e) => handleInputChange('cargo', e.target.value)}
+                placeholder="Digite o cargo do candidato"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="area_atuacao">Área de Atuação *</Label>

@@ -18,6 +18,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useToast } from '../hooks/use-toast';
 import { validateAndProcessFile } from '../lib/utils';
+import { sendgridEmailService } from '../lib/sendgridEmailService';
 import { Loader2, Building2, MapPin, Calendar, DollarSign, FileText, CheckCircle, XCircle, Upload, Send, Eye, ArrowLeft, User, PartyPopper, BriefcaseIcon, ArrowRight } from 'lucide-react';
 
 interface Pergunta {
@@ -325,6 +326,27 @@ const VagaPublica: React.FC = () => {
             console.error('Erro ao salvar respostas do questionário:', erroRespostas);
             // Não falhar a candidatura por erro no questionário
           }
+        }
+
+        // Enviar e-mail automático de confirmação de recebimento de currículo
+        try {
+          if (candidato?.email && candidato?.nome && vaga?.cargo) {
+            const emailResult = await sendgridEmailService.sendCurriculoRecebido({
+              candidatoEmail: candidato.email,
+              candidatoNome: candidato.nome,
+              vagaTitulo: vaga.cargo
+            });
+
+            if (!emailResult.success) {
+              console.error('Erro ao enviar e-mail de confirmação:', emailResult.error);
+              // Não falhar a candidatura por erro no e-mail, apenas registrar
+            } else {
+              console.log('E-mail de confirmação enviado com sucesso');
+            }
+          }
+        } catch (emailError) {
+          console.error('Erro ao tentar enviar e-mail de confirmação:', emailError);
+          // Não falhar a candidatura por erro no e-mail
         }
 
         // Atualizar estados

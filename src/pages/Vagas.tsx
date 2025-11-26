@@ -52,6 +52,7 @@ import { EditVagaModal } from "@/components/vagas/EditVagaModal";
 import { AddCandidatoModal } from "@/components/candidatos/AddCandidatoModal";
 import { CandidatoDetailsModal } from "@/components/candidatos/CandidatoDetailsModal";
 import { EmailModal } from "@/components/candidatos/EmailModal";
+import { PdfViewerModal } from "@/components/curriculos/PdfViewerModal";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { VAGA_STATUS_CONFIG, VAGA_SUBSTATUS_CONFIG, VagaStatus, VagaSubstatus } from "@/types";
@@ -101,7 +102,7 @@ interface Vaga {
 
 const getFaseBadge = (fase: string) => {
   const faseConfig = {
-    selecionando: { label: "Selecionando", color: "bg-blue-100 text-blue-800" },
+    selecionando: { label: "Em seleção", color: "bg-blue-100 text-blue-800" },
     curriculos_enviados: { label: "CVs Enviados", color: "bg-yellow-100 text-yellow-800" },
     entrevistas: { label: "Entrevistas", color: "bg-orange-100 text-orange-800" },
     fase_final: { label: "Fase Final", color: "bg-purple-100 text-purple-800" },
@@ -154,6 +155,8 @@ const Vagas = () => {
   const [isAddCandidatoModalOpen, setIsAddCandidatoModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string>('');
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [isEncerrarModalOpen, setIsEncerrarModalOpen] = useState(false);
   const [vagaToEncerrar, setVagaToEncerrar] = useState<Vaga | null>(null);
@@ -407,7 +410,6 @@ const Vagas = () => {
         return;
       }
 
-      // Implementar a mesma lógica de download da tela de currículos
       // Se é arquivo não disponível
       if (data.url_storage === 'ARQUIVO_NAO_DISPONIVEL') {
         toast({
@@ -418,59 +420,33 @@ const Vagas = () => {
         return;
       }
 
-      // Se já é uma URL completa (candidatos externos), abrir diretamente
+      let urlToView = '';
+
+      // Se já é uma URL completa (candidatos externos), usar diretamente
       if (data.url_storage.startsWith('http')) {
-        window.open(data.url_storage, '_blank');
-        toast({
-          title: "Currículo aberto",
-          description: `Currículo de ${candidate.name} aberto em nova aba.`,
-        });
-        return;
-      }
-      
-      // Para arquivos no storage do Supabase
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from('curriculos')
-        .download(data.url_storage);
-      
-      if (downloadError) {
-        console.error('Erro ao baixar currículo:', downloadError);
-        
-        // Fallback: tentar URL pública
+        urlToView = data.url_storage;
+      } else {
+        // Para arquivos no storage do Supabase, obter URL pública
         const { data: publicData } = supabase.storage
           .from('curriculos')
           .getPublicUrl(data.url_storage);
         
         if (publicData?.publicUrl) {
-          window.open(publicData.publicUrl, '_blank');
-          toast({
-            title: "Currículo aberto",
-            description: `Currículo de ${candidate.name} aberto em nova aba.`,
-          });
+          urlToView = publicData.publicUrl;
         } else {
           toast({
-            title: "Erro no download",
-            description: "Erro ao baixar currículo. Arquivo pode não estar disponível.",
+            title: "Erro ao acessar currículo",
+            description: "Não foi possível gerar URL para visualização do currículo.",
             variant: "destructive",
           });
+          return;
         }
-        return;
       }
-      
-      // Criar blob e download
-      const url = URL.createObjectURL(fileData);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = data.nome_arquivo || 'curriculo.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast({
-        title: "Download concluído",
-        description: `Currículo de ${candidate.name} baixado com sucesso.`,
-      });
+
+      // Abrir modal de visualização de PDF
+      setSelectedCandidate(candidate);
+      setPdfUrl(urlToView);
+      setIsPdfViewerOpen(true);
       
     } catch (error) {
       console.error('Erro ao processar currículo:', error);
@@ -1372,6 +1348,18 @@ const Vagas = () => {
           candidate={selectedCandidate}
           vagaCargo={selectedVaga?.cargo}
           vagaEmpresa={selectedVaga?.empresa?.razao_social}
+        />
+
+        {/* Modal de Visualização de PDF */}
+        <PdfViewerModal
+          isOpen={isPdfViewerOpen}
+          onClose={() => {
+            setIsPdfViewerOpen(false);
+            setPdfUrl('');
+            setSelectedCandidate(null);
+          }}
+          pdfUrl={pdfUrl}
+          candidateName={selectedCandidate?.name || ''}
         />
 
         {/* Modal de Confirmação para Encerrar Vaga */}

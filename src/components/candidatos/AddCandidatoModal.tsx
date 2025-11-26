@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { uploadCurriculo, saveCurriculoReference } from "@/lib/curriculoService";
+import { sendgridEmailService } from "@/lib/sendgridEmailService";
 import { Upload, FileText, X } from "lucide-react";
 
 interface AddCandidatoModalProps {
@@ -101,6 +102,27 @@ export function AddCandidatoModal({ isOpen, onClose, onSuccess, vagaId, vagaCarg
         if (!saveResult.success) {
           throw new Error(saveResult.error || 'Erro ao salvar referência do currículo');
         }
+      }
+
+      // Enviar e-mail automático de confirmação de recebimento de currículo
+      try {
+        if (formData.email && formData.nome && vagaCargo) {
+          const emailResult = await sendgridEmailService.sendCurriculoRecebido({
+            candidatoEmail: formData.email,
+            candidatoNome: formData.nome,
+            vagaTitulo: vagaCargo
+          });
+
+          if (!emailResult.success) {
+            console.error('Erro ao enviar e-mail de confirmação:', emailResult.error);
+            // Não falhar a adição do candidato por erro no e-mail, apenas registrar
+          } else {
+            console.log('E-mail de confirmação enviado com sucesso para:', formData.email);
+          }
+        }
+      } catch (emailError) {
+        console.error('Erro ao tentar enviar e-mail de confirmação:', emailError);
+        // Não falhar a adição do candidato por erro no e-mail
       }
 
       toast({

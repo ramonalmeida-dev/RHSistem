@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SendToVagaModal } from "./SendToVagaModal";
+import { PdfViewerModal } from "./PdfViewerModal";
 import { 
   Mail, 
   Phone, 
@@ -58,6 +59,8 @@ const renderStars = (rating: number) => {
 export const CurriculoDetailsModal = ({ curriculo, open, onOpenChange }: CurriculoDetailsModalProps) => {
   const [loading, setLoading] = useState(false);
   const [sendToVagaModalOpen, setSendToVagaModalOpen] = useState(false);
+  const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string>('');
 
   const handleDownload = async () => {
     try {
@@ -69,46 +72,32 @@ export const CurriculoDetailsModal = ({ curriculo, open, onOpenChange }: Curricu
         return;
       }
 
-      // Se já é uma URL completa (candidatos externos), abrir diretamente
+      let urlToView = '';
+
+      // Se já é uma URL completa (candidatos externos), usar diretamente
       if (curriculo.url_storage.startsWith('http')) {
-        window.open(curriculo.url_storage, '_blank');
-        return;
-      }
-      
-      // Para arquivos no storage do Supabase
-      const { data, error } = await supabase.storage
-        .from('curriculos')
-        .download(curriculo.url_storage);
-      
-      if (error) {
-        console.error('Erro ao baixar currículo:', error);
-        
-        // Fallback: tentar URL pública
+        urlToView = curriculo.url_storage;
+      } else {
+        // Para arquivos no storage do Supabase, obter URL pública
         const { data: publicData } = supabase.storage
           .from('curriculos')
           .getPublicUrl(curriculo.url_storage);
         
         if (publicData?.publicUrl) {
-          window.open(publicData.publicUrl, '_blank');
+          urlToView = publicData.publicUrl;
         } else {
-          alert('Erro ao baixar currículo. Arquivo pode não estar disponível.');
+          alert('Erro ao acessar currículo. Não foi possível gerar URL para visualização.');
+          return;
         }
-        return;
       }
-      
-      // Criar blob e download
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = curriculo.nome_arquivo || 'curriculo.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+
+      // Abrir modal de visualização de PDF
+      setPdfUrl(urlToView);
+      setIsPdfViewerOpen(true);
       
     } catch (error) {
-      console.error('Erro ao processar download:', error);
-      alert('Erro ao baixar currículo');
+      console.error('Erro ao processar currículo:', error);
+      alert('Erro ao visualizar currículo');
     } finally {
       setLoading(false);
     }
@@ -309,6 +298,17 @@ export const CurriculoDetailsModal = ({ curriculo, open, onOpenChange }: Curricu
         onSuccess={() => {
           // Opcional: callback para atualizar dados
         }}
+      />
+
+      {/* Modal de Visualização de PDF */}
+      <PdfViewerModal
+        isOpen={isPdfViewerOpen}
+        onClose={() => {
+          setIsPdfViewerOpen(false);
+          setPdfUrl('');
+        }}
+        pdfUrl={pdfUrl}
+        candidateName={curriculo?.candidato?.nome || ''}
       />
     </Dialog>
   );

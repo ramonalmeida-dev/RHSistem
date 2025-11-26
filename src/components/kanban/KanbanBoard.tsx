@@ -40,12 +40,12 @@ export const CANDIDATE_STATUSES = {
   },
   entrevista_agendada: {
     id: 'entrevista_agendada',
-    title: 'Entrevista',
+    title: 'Entrevista na empresa',
     icon: Calendar,
     color: 'bg-purple-50 border-purple-200',
     textColor: 'text-purple-700',
     badgeColor: 'bg-purple-100 text-purple-800',
-    description: 'Entrevistas agendadas'
+    description: 'Entrevistas agendadas na empresa'
   },
   aprovado: {
     id: 'aprovado',
@@ -76,7 +76,7 @@ export const CANDIDATE_STATUSES = {
   },
   selecionando: {
     id: 'selecionando',
-    title: 'Selecionando',
+    title: 'Em seleção',
     icon: Users,
     color: 'bg-blue-50 border-blue-200',
     textColor: 'text-blue-700',

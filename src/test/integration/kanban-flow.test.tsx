@@ -126,9 +126,9 @@ describe('Kanban Board - Testes de Integração', () => {
       );
 
       // Verificar se todas as colunas estão presentes
-      expect(screen.getByText('Selecionando')).toBeInTheDocument();
+      expect(screen.getByText('Em seleção')).toBeInTheDocument();
       expect(screen.getByText('CV Enviado')).toBeInTheDocument();
-      expect(screen.getByText('Entrevista')).toBeInTheDocument();
+      expect(screen.getByText('Entrevista na empresa')).toBeInTheDocument();
       expect(screen.getByText('Aprovado')).toBeInTheDocument();
       expect(screen.getByText('Reprovado')).toBeInTheDocument();
       expect(screen.getByText('Desistiu')).toBeInTheDocument();
@@ -142,7 +142,7 @@ describe('Kanban Board - Testes de Integração', () => {
         />
       );
 
-      // Verificar candidatos na coluna "Selecionando"
+      // Verificar candidatos na coluna "Em seleção"
       const selecionandoColumn = screen.getByTestId('kanban-column-selecionando');
       expect(within(selecionandoColumn).getByText('Pedro Silva')).toBeInTheDocument();
 
@@ -150,7 +150,7 @@ describe('Kanban Board - Testes de Integração', () => {
       const cvEnviadoColumn = screen.getByTestId('kanban-column-curriculo_enviado');
       expect(within(cvEnviadoColumn).getByText('Ana Santos')).toBeInTheDocument();
 
-      // Verificar candidatos na coluna "Entrevista"
+      // Verificar candidatos na coluna "Entrevista na empresa"
       const entrevistaColumn = screen.getByTestId('kanban-column-entrevista_agendada');
       expect(within(entrevistaColumn).getByText('Carlos Oliveira')).toBeInTheDocument();
 
@@ -364,7 +364,7 @@ describe('Kanban Board - Testes de Integração', () => {
         />
       );
 
-      // Simular drag and drop movendo Pedro Silva de "Selecionando" para "CV Enviado"
+      // Simular drag and drop movendo Pedro Silva de "Em seleção" para "CV Enviado"
       // Como o drag and drop real é complexo de testar, vamos simular a ação
       const candidateCard = screen.getByText('Pedro Silva').closest('[data-testid="candidate-card"]');
       expect(candidateCard).toBeInTheDocument();
@@ -432,7 +432,7 @@ describe('Kanban Board - Testes de Integração', () => {
         />
       );
 
-      // Verificar se aparece na coluna "Selecionando"
+      // Verificar se aparece na coluna "Em seleção"
       const selecionandoColumn = screen.getByTestId('kanban-column-selecionando');
       expect(within(selecionandoColumn).getByText('João Candidato')).toBeInTheDocument();
 

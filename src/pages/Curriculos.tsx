@@ -48,6 +48,7 @@ import { CurriculoDetailsModal } from "@/components/curriculos/CurriculoDetailsM
 import { SendToVagaModal } from "@/components/curriculos/SendToVagaModal";
 import { AddCurriculoModal } from "@/components/curriculos/AddCurriculoModal";
 import { EditCandidatoModal } from "@/components/candidatos/EditCandidatoModal";
+import { PdfViewerModal } from "@/components/curriculos/PdfViewerModal";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
@@ -60,6 +61,7 @@ interface BancoCurriculoWithCandidato {
   url_storage: string;
   tamanho_bytes: number;
   tipo_arquivo?: string;
+  cargo_interesse?: string;
   area_atuacao?: string;
   experiencia_anos?: number;
   formacao?: string;
@@ -138,6 +140,9 @@ const Curriculos = () => {
   const [editCandidatoModalOpen, setEditCandidatoModalOpen] = useState(false);
   const [candidatoToEdit, setCandidatoToEdit] = useState<BancoCurriculoWithCandidato | null>(null);
   const [addCurriculoModalOpen, setAddCurriculoModalOpen] = useState(false);
+  const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [pdfCandidateName, setPdfCandidateName] = useState<string>('');
   const { toast } = useToast();
   
   // Paginação
@@ -283,7 +288,7 @@ const Curriculos = () => {
     loadStats();
   }, []);
 
-  // Download currículo
+  // Visualizar currículo (antigo handleDownload)
   const handleDownload = async (curriculo: BancoCurriculoWithCandidato) => {
     try {
       // Se é arquivo não disponível
@@ -296,57 +301,39 @@ const Curriculos = () => {
         return;
       }
 
-      // Se já é uma URL completa (candidatos externos), abrir diretamente
+      let urlToView = '';
+
+      // Se já é uma URL completa (candidatos externos), usar diretamente
       if (curriculo.url_storage.startsWith('http')) {
-        window.open(curriculo.url_storage, '_blank');
-        return;
-      }
-      
-      // Para arquivos no storage do Supabase
-      const { data, error } = await supabase.storage
-        .from('curriculos')
-        .download(curriculo.url_storage);
-      
-      if (error) {
-        console.error('Erro ao baixar currículo:', error);
-        
-        // Fallback: tentar URL pública
+        urlToView = curriculo.url_storage;
+      } else {
+        // Para arquivos no storage do Supabase, obter URL pública
         const { data: publicData } = supabase.storage
           .from('curriculos')
           .getPublicUrl(curriculo.url_storage);
         
         if (publicData?.publicUrl) {
-          window.open(publicData.publicUrl, '_blank');
+          urlToView = publicData.publicUrl;
         } else {
           toast({
-            title: "Erro no download",
-            description: "Erro ao baixar currículo. Arquivo pode não estar disponível.",
+            title: "Erro ao acessar currículo",
+            description: "Não foi possível gerar URL para visualização do currículo.",
             variant: "destructive",
           });
+          return;
         }
-        return;
       }
-      
-      // Criar blob e download
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = curriculo.nome_arquivo || 'curriculo.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast({
-        title: "Download concluído",
-        description: `Currículo de ${curriculo.candidato.nome} baixado com sucesso.`,
-      });
+
+      // Abrir modal de visualização de PDF
+      setPdfCandidateName(curriculo.candidato.nome);
+      setPdfUrl(urlToView);
+      setIsPdfViewerOpen(true);
       
     } catch (error) {
-      console.error('Erro ao processar download:', error);
+      console.error('Erro ao processar currículo:', error);
       toast({
-        title: "Erro no download",
-        description: "Erro ao baixar currículo",
+        title: "Erro ao visualizar",
+        description: "Erro ao visualizar currículo",
         variant: "destructive",
       });
     }
@@ -791,6 +778,18 @@ const Curriculos = () => {
             curriculo={candidatoToEdit}
           />
         )}
+
+        {/* Modal de Visualização de PDF */}
+        <PdfViewerModal
+          isOpen={isPdfViewerOpen}
+          onClose={() => {
+            setIsPdfViewerOpen(false);
+            setPdfUrl('');
+            setPdfCandidateName('');
+          }}
+          pdfUrl={pdfUrl}
+          candidateName={pdfCandidateName}
+        />
       </div>
     </MainLayout>
   );
