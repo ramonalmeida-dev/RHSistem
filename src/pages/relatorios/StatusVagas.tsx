@@ -79,6 +79,21 @@ const VAGA_STATUS_CONFIG = {
   }
 };
 
+// Função auxiliar para formatar datas de forma segura
+const formatDateSafe = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = parseISO(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Data inválida';
+    }
+    return format(date, 'dd/MM/yyyy', { locale: ptBR });
+  } catch (error) {
+    console.error('Erro ao formatar data:', dateString, error);
+    return 'Data inválida';
+  }
+};
+
 export default function StatusVagas() {
   const { usuario } = useAuth();
   const { isConsultor, podeVerTodasVagas } = usePermissions();
@@ -483,7 +498,7 @@ export default function StatusVagas() {
                             <span className="font-medium">Candidatos:</span> {vaga.total_candidatos_enviados}
                           </div>
                           <div>
-                            <span className="font-medium">Início:</span> {vaga.data_inicio ? format(parseISO(vaga.data_inicio), 'dd/MM/yyyy') : 'N/A'}
+                            <span className="font-medium">Início:</span> {formatDateSafe(vaga.data_inicio)}
                           </div>
                         </div>
                       </div>

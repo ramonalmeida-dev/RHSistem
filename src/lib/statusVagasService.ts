@@ -118,20 +118,31 @@ export class StatusVagasService {
                 return {
                   id: cv.id,
                   nome: cv.candidatos?.nome || `Candidato ${cv.candidato_id?.slice(0, 8) || 'N/A'}`,
-                  codigo: this.generateCandidateCode(cv.data_candidatura, cv.id),
+                  codigo: StatusVagasService.generateCandidateCode(cv.data_candidatura, cv.id),
                   data_envio: cv.data_candidatura || new Date().toISOString(),
-                  status: this.mapStatusToRelatorio(cv.status_atual),
+                  status: StatusVagasService.mapStatusToRelatorio(cv.status_atual),
                   data_status: statusInfo.data_status,
                   dias_no_status: statusInfo.dias_no_status,
-                  data_entrevista: this.extractDateFromObservacoes(cv.observacoes),
-                  hora_entrevista: this.extractTimeFromObservacoes(cv.observacoes)
+                  data_entrevista: StatusVagasService.extractDateFromObservacoes(cv.observacoes),
+                  hora_entrevista: StatusVagasService.extractTimeFromObservacoes(cv.observacoes)
                 };
               })
             );
 
             const dataInicio = vaga.data_inicio_selecao || vaga.data_envio_curriculos || new Date().toISOString();
             const dataPrimeiraRemessa = vaga.data_envio_curriculos || vaga.data_inicio_selecao || new Date().toISOString();
-            const diasProcesso = dataInicio ? differenceInDays(new Date(), parseISO(dataInicio)) : 0;
+            let diasProcesso = 0;
+            if (dataInicio) {
+              try {
+                const date = parseISO(dataInicio);
+                if (!isNaN(date.getTime())) {
+                  diasProcesso = differenceInDays(new Date(), date);
+                }
+              } catch (error) {
+                console.error('Erro ao calcular dias do processo:', error);
+                diasProcesso = 0;
+              }
+            }
 
             return {
               id: vaga.id,
@@ -152,7 +163,18 @@ export class StatusVagasService {
             // Em caso de erro, retornar vaga sem candidatos
             const dataInicio = vaga.data_inicio_selecao || vaga.data_envio_curriculos || new Date().toISOString();
             const dataPrimeiraRemessa = vaga.data_envio_curriculos || vaga.data_inicio_selecao || new Date().toISOString();
-            const diasProcesso = dataInicio ? differenceInDays(new Date(), parseISO(dataInicio)) : 0;
+            let diasProcesso = 0;
+            if (dataInicio) {
+              try {
+                const date = parseISO(dataInicio);
+                if (!isNaN(date.getTime())) {
+                  diasProcesso = differenceInDays(new Date(), date);
+                }
+              } catch (error) {
+                console.error('Erro ao calcular dias do processo (catch):', error);
+                diasProcesso = 0;
+              }
+            }
 
             return {
               id: vaga.id,
@@ -208,7 +230,16 @@ export class StatusVagasService {
         dataStatus = candidatoVaga?.data_candidatura || new Date().toISOString();
       }
 
-      const diasNoStatus = differenceInDays(new Date(), parseISO(dataStatus));
+      let diasNoStatus = 0;
+      try {
+        const date = parseISO(dataStatus);
+        if (!isNaN(date.getTime())) {
+          diasNoStatus = differenceInDays(new Date(), date);
+        }
+      } catch (error) {
+        console.error('Erro ao calcular dias no status:', error);
+        diasNoStatus = 0;
+      }
       
       return {
         data_status: dataStatus,
@@ -276,7 +307,7 @@ export class StatusVagasService {
   }
 
   static async generateHTMLContent(vagasEspecificas?: VagaStatusRelatorio[]): Promise<string> {
-    const vagas = vagasEspecificas || await this.list();
+    const vagas = vagasEspecificas || await StatusVagasService.list();
     if (!vagas || vagas.length === 0) {
       throw new Error('Nenhuma vaga encontrada para gerar relatório');
     }
@@ -463,8 +494,8 @@ export class StatusVagasService {
         
         // Adicionar informações de status para cada vaga
         vagasEmpresa.forEach((vaga, index) => {
-          const statusLabel = this.getVagaStatusLabel(vaga.status);
-          const statusClass = this.getVagaStatusClass(vaga.status);
+          const statusLabel = StatusVagasService.getVagaStatusLabel(vaga.status);
+          const statusClass = StatusVagasService.getVagaStatusClass(vaga.status);
           htmlContent += `
               <div class="vaga-item">
                 <span class="vaga-numero">Vaga #${vaga.numero_vaga}</span>
@@ -507,7 +538,7 @@ export class StatusVagasService {
             // Para cada candidato, criar uma linha
             vaga.candidatos.forEach((candidato, index) => {
               const isFirstRow = index === 0;
-              const statusClass = this.getStatusClass(candidato.status);
+              const statusClass = StatusVagasService.getStatusClass(candidato.status);
               
               htmlContent += `
                 <tr class="${isFirstRow ? 'vaga-row' : 'candidato-row'}">
@@ -516,13 +547,13 @@ export class StatusVagasService {
                   <td class="consultor-col">${isFirstRow ? vaga.consultor_nome : ''}</td>
                   <td class="salario-col">${isFirstRow ? (vaga.salario || '-') : ''}</td>
                   <td class="vaga-col">${isFirstRow ? vaga.numero_vaga : ''}</td>
-                  <td class="data-col">${isFirstRow ? this.formatDate(vaga.data_inicio) : ''}</td>
-                  <td class="data-col">${isFirstRow ? this.formatDate(vaga.data_primeira_remessa) : ''}</td>
+                  <td class="data-col">${isFirstRow ? StatusVagasService.formatDate(vaga.data_inicio) : ''}</td>
+                  <td class="data-col">${isFirstRow ? StatusVagasService.formatDate(vaga.data_primeira_remessa) : ''}</td>
                   <td class="dias-col">${isFirstRow ? vaga.dias_processo : ''}</td>
                   <td class="num-enviados-col">${isFirstRow ? vaga.total_candidatos_enviados : ''}</td>
                   <td class="candidato-col candidato-nome">${candidato.nome}</td>
                   <td class="status-col status-cell ${statusClass}">${candidato.status}</td>
-                  <td class="data-status-col">${this.formatDate(candidato.data_status)}</td>
+                  <td class="data-status-col">${StatusVagasService.formatDate(candidato.data_status)}</td>
                   <td class="dias-status-col">${candidato.dias_no_status}</td>
                 </tr>
               `;
@@ -536,8 +567,8 @@ export class StatusVagasService {
                 <td class="consultor-col">${vaga.consultor_nome}</td>
                 <td class="salario-col">${vaga.salario || '-'}</td>
                 <td class="vaga-col">${vaga.numero_vaga}</td>
-                <td class="data-col">${this.formatDate(vaga.data_inicio)}</td>
-                <td class="data-col">${this.formatDate(vaga.data_primeira_remessa)}</td>
+                <td class="data-col">${StatusVagasService.formatDate(vaga.data_inicio)}</td>
+                <td class="data-col">${StatusVagasService.formatDate(vaga.data_primeira_remessa)}</td>
                 <td class="dias-col">${vaga.dias_processo}</td>
                 <td class="num-enviados-col">${vaga.total_candidatos_enviados}</td>
                 <td class="candidato-col empty-cell">Nenhum candidato</td>
@@ -599,7 +630,7 @@ export class StatusVagasService {
   }
 
   // Funções auxiliares
-  private static getStatusClass(status: string): string {
+  static getStatusClass(status: string): string {
     switch (status) {
       case 'NAO_APROVADO': return 'status-nao-aprovado';
       case 'APROVADO': return 'status-aprovado';
@@ -614,7 +645,7 @@ export class StatusVagasService {
     }
   }
 
-  private static getVagaStatusLabel(status: string): string {
+  static getVagaStatusLabel(status: string): string {
     switch (status) {
       case 'publicada': return 'Publicada';
       case 'em_analise': return 'Em Análise';
@@ -624,7 +655,7 @@ export class StatusVagasService {
     }
   }
 
-  private static getVagaStatusClass(status: string): string {
+  static getVagaStatusClass(status: string): string {
     switch (status) {
       case 'publicada': return 'vaga-status-publicada';
       case 'em_analise': return 'vaga-status-em-analise';
@@ -634,22 +665,30 @@ export class StatusVagasService {
     }
   }
 
-  private static formatDate(dateString: string): string {
+  static formatDate(dateString: string): string {
     if (!dateString) return '';
     try {
-      return format(parseISO(dateString), 'dd/MM/yyyy');
+      const date = parseISO(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Data inválida';
+      }
+      return format(date, 'dd/MM/yyyy');
     } catch {
-      return dateString;
+      return 'Data inválida';
     }
   }
 
-  private static formatEntrevista(dataEntrevista?: string, horaEntrevista?: string): string {
+  static formatEntrevista(dataEntrevista?: string, horaEntrevista?: string): string {
     if (!dataEntrevista) return '';
     try {
-      const data = format(parseISO(dataEntrevista), 'dd/MMM');
+      const date = parseISO(dataEntrevista);
+      if (isNaN(date.getTime())) {
+        return 'Data inválida';
+      }
+      const data = format(date, 'dd/MMM');
       return horaEntrevista ? `${data} - ${horaEntrevista}` : data;
     } catch {
-      return dataEntrevista;
+      return 'Data inválida';
     }
   }
 
@@ -701,6 +740,9 @@ export class StatusVagasService {
       }
       
       const data = parseISO(dataEnvio);
+      if (isNaN(data.getTime())) {
+        return `CAND${candidatoId?.slice(-4) || '0000'}`;
+      }
       const mes = format(data, 'MM');
       const ano = format(data, 'yy');
       const id = candidatoId.slice(-4).toUpperCase();
