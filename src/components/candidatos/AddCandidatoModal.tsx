@@ -100,6 +100,7 @@ export function AddCandidatoModal({ isOpen, onClose, onSuccess, vagaId, vagaCarg
         );
 
         if (!saveResult.success) {
+          console.error('Erro detalhado ao salvar referência:', saveResult.error);
           throw new Error(saveResult.error || 'Erro ao salvar referência do currículo');
         }
       }

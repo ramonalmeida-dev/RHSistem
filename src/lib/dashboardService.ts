@@ -173,26 +173,55 @@ export class DashboardService {
     try {
       const activities: RecentActivityItem[] = [];
 
-      // Buscar vagas recentes
+      // Buscar vagas recentes com consultor
       const { data: vagasRecentes } = await supabase
         .from('vagas')
-        .select('cargo, created_at, empresa:clientes(razao_social)')
+        .select('cargo, created_at, consultor_id, empresa:clientes(razao_social), consultor:usuarios(nome)')
         .order('created_at', { ascending: false })
         .limit(3);
 
-      vagasRecentes?.forEach((vaga: any) => {
+      // Buscar nomes dos consultores para as vagas
+      const consultoresPromises = (vagasRecentes || []).map(async (vaga: any) => {
+        let consultorNome = 'Sistema';
+        
+        if (vaga.consultor?.nome) {
+          consultorNome = vaga.consultor.nome;
+        } else if (vaga.consultor_id) {
+          // Buscar consultor diretamente
+          const { data: consultorData } = await supabase
+            .from('usuarios')
+            .select('nome')
+            .eq('id', vaga.consultor_id)
+            .single();
+          
+          if (consultorData?.nome) {
+            consultorNome = consultorData.nome;
+          }
+        }
+
+        return {
+          vaga,
+          consultorNome
+        };
+      });
+
+      const vagasComConsultores = await Promise.all(consultoresPromises);
+
+      vagasComConsultores.forEach(({ vaga, consultorNome }) => {
         activities.push({
           id: `vaga-${vaga.cargo}`,
           type: 'vaga_criada',
           title: 'Nova vaga cadastrada',
           description: `${vaga.cargo} - ${vaga.empresa?.razao_social || 'Empresa não informada'}`,
           timestamp: new Date(vaga.created_at),
-          user: { name: 'Sistema' },
+          user: { name: consultorNome },
           status: 'info'
         });
       });
 
       // Buscar currículos recentes
+      // Nota: banco_curriculos não tem campo de usuário que criou, então usamos "Sistema"
+      // ou podemos buscar através de histórico se disponível
       const { data: curriculosRecentes } = await supabase
         .from('banco_curriculos')
         .select('candidato:candidatos(nome), created_at, area_atuacao')
@@ -200,11 +229,13 @@ export class DashboardService {
         .limit(3);
 
       curriculosRecentes?.forEach((curriculo: any) => {
+        // Como banco_curriculos não tem campo de usuário, usamos "Sistema"
+        // Se no futuro houver histórico ou campo created_by, podemos atualizar aqui
         activities.push({
           id: `curriculo-${curriculo.candidato?.nome}`,
           type: 'curriculo_adicionado',
           title: 'Currículo adicionado ao banco',
-          description: `${curriculo.candidato?.nome} - ${curriculo.area_atuacao || 'Área não informada'}`,
+          description: `${curriculo.candidato?.nome} - ${curriculo.area_atuacao || 'Cargo não informado'}`,
           timestamp: new Date(curriculo.created_at),
           user: { name: 'Sistema' },
           status: 'success'

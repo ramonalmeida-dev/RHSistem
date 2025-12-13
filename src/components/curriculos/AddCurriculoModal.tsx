@@ -56,10 +56,46 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
   });
   const [loading, setLoading] = useState(false);
   const [curriculoFile, setCurriculoFile] = useState<File | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.nome.trim()) {
+      newErrors.nome = "Nome é obrigatório";
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email é obrigatório";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Email deve ser válido";
+    }
+
+    if (!formData.telefone.trim()) {
+      newErrors.telefone = "Telefone é obrigatório";
+    }
+
+    if (!formData.cargo.trim()) {
+      newErrors.cargo = "Cargo é obrigatório";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      toast({
+        title: "Erro de validação",
+        description: "Por favor, preencha todos os campos obrigatórios até o campo Cargo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -101,7 +137,7 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
           p_nome: formData.nome,
           p_email: formData.email,
           p_telefone: formData.telefone,
-          p_cargo: formData.cargo || null,
+          p_cargo: formData.cargo.trim() || null,
           p_area_atuacao: formData.area_atuacao || null,
           p_experiencia_anos: formData.experiencia_anos,
           p_formacao: formData.formacao || null,
@@ -148,6 +184,7 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
         portfolio_url: ""
       });
       setCurriculoFile(null);
+      setErrors({});
       
       onSuccess();
       onClose();
@@ -232,10 +269,19 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
                 <Input
                   id="nome"
                   value={formData.nome}
-                  onChange={(e) => handleInputChange('nome', e.target.value)}
+                  onChange={(e) => {
+                    handleInputChange('nome', e.target.value);
+                    if (errors.nome) {
+                      setErrors(prev => ({ ...prev, nome: '' }));
+                    }
+                  }}
                   placeholder="Nome completo"
                   required
+                  className={errors.nome ? "border-destructive" : ""}
                 />
+                {errors.nome && (
+                  <p className="text-sm text-destructive">{errors.nome}</p>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -244,10 +290,19 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  onChange={(e) => {
+                    handleInputChange('email', e.target.value);
+                    if (errors.email) {
+                      setErrors(prev => ({ ...prev, email: '' }));
+                    }
+                  }}
                   placeholder="email@exemplo.com"
                   required
+                  className={errors.email ? "border-destructive" : ""}
                 />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email}</p>
+                )}
               </div>
             </div>
 
@@ -257,10 +312,19 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
                 <Input
                   id="telefone"
                   value={formData.telefone}
-                  onChange={(e) => handleInputChange('telefone', e.target.value)}
+                  onChange={(e) => {
+                    handleInputChange('telefone', e.target.value);
+                    if (errors.telefone) {
+                      setErrors(prev => ({ ...prev, telefone: '' }));
+                    }
+                  }}
                   placeholder="(11) 99999-9999"
                   required
+                  className={errors.telefone ? "border-destructive" : ""}
                 />
+                {errors.telefone && (
+                  <p className="text-sm text-destructive">{errors.telefone}</p>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -281,7 +345,7 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
             
             <div className="space-y-2">
               <Label htmlFor="cargo">
-                Cargo
+                Cargo *
                 <span className="text-xs text-gray-500 ml-2">
                   (Ex: Analista de Marketing Pleno, Desenvolvedor Full Stack, Designer UI/UX)
                 </span>
@@ -289,43 +353,32 @@ export function AddCurriculoModal({ isOpen, onClose, onSuccess }: AddCurriculoMo
               <Input
                 id="cargo"
                 value={formData.cargo}
-                onChange={(e) => handleInputChange('cargo', e.target.value)}
+                onChange={(e) => {
+                  handleInputChange('cargo', e.target.value);
+                  if (errors.cargo) {
+                    setErrors(prev => ({ ...prev, cargo: '' }));
+                  }
+                }}
                 placeholder="Digite o cargo do candidato"
+                required
+                className={errors.cargo ? "border-destructive" : ""}
               />
+              {errors.cargo && (
+                <p className="text-sm text-destructive">{errors.cargo}</p>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="area_atuacao">Área de Atuação *</Label>
-                <Select value={formData.area_atuacao} onValueChange={(value) => handleInputChange('area_atuacao', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a área" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="desenvolvimento">Desenvolvimento</SelectItem>
-                    <SelectItem value="marketing">Marketing</SelectItem>
-                    <SelectItem value="vendas">Vendas</SelectItem>
-                    <SelectItem value="design">Design</SelectItem>
-                    <SelectItem value="rh">Recursos Humanos</SelectItem>
-                    <SelectItem value="administrativo">Administrativo</SelectItem>
-                    <SelectItem value="financeiro">Financeiro</SelectItem>
-                    <SelectItem value="outros">Outros</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="experiencia_anos">Anos de Experiência</Label>
-                <Input
-                  id="experiencia_anos"
-                  type="number"
-                  min="0"
-                  max="50"
-                  value={formData.experiencia_anos}
-                  onChange={(e) => handleInputChange('experiencia_anos', parseInt(e.target.value) || 0)}
-                  placeholder="0"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="experiencia_anos">Anos de Experiência</Label>
+              <Input
+                id="experiencia_anos"
+                type="number"
+                min="0"
+                max="50"
+                value={formData.experiencia_anos}
+                onChange={(e) => handleInputChange('experiencia_anos', parseInt(e.target.value) || 0)}
+                placeholder="0"
+              />
             </div>
 
             <div className="space-y-2">

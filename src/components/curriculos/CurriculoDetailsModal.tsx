@@ -61,6 +61,8 @@ export const CurriculoDetailsModal = ({ curriculo, open, onOpenChange }: Curricu
   const [sendToVagaModalOpen, setSendToVagaModalOpen] = useState(false);
   const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [pdfFileName, setPdfFileName] = useState<string>('');
+  const [pdfFileType, setPdfFileType] = useState<string>('');
 
   const handleDownload = async () => {
     try {
@@ -93,6 +95,8 @@ export const CurriculoDetailsModal = ({ curriculo, open, onOpenChange }: Curricu
 
       // Abrir modal de visualização de PDF
       setPdfUrl(urlToView);
+      setPdfFileName(curriculo.nome_arquivo || '');
+      setPdfFileType(curriculo.tipo_arquivo || '');
       setIsPdfViewerOpen(true);
       
     } catch (error) {
@@ -151,7 +155,7 @@ export const CurriculoDetailsModal = ({ curriculo, open, onOpenChange }: Curricu
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
                   <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{curriculo.area_atuacao || 'Não informado'}</span>
+                  <span className="font-medium">{curriculo.cargo_interesse || curriculo.area_atuacao || 'Não informado'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -306,9 +310,13 @@ export const CurriculoDetailsModal = ({ curriculo, open, onOpenChange }: Curricu
         onClose={() => {
           setIsPdfViewerOpen(false);
           setPdfUrl('');
+          setPdfFileName('');
+          setPdfFileType('');
         }}
         pdfUrl={pdfUrl}
         candidateName={curriculo?.candidato?.nome || ''}
+        fileName={pdfFileName}
+        fileType={pdfFileType}
       />
     </Dialog>
   );

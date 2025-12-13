@@ -143,6 +143,8 @@ const Curriculos = () => {
   const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string>('');
   const [pdfCandidateName, setPdfCandidateName] = useState<string>('');
+  const [pdfFileName, setPdfFileName] = useState<string>('');
+  const [pdfFileType, setPdfFileType] = useState<string>('');
   const { toast } = useToast();
   
   // Paginação
@@ -327,6 +329,8 @@ const Curriculos = () => {
       // Abrir modal de visualização de PDF
       setPdfCandidateName(curriculo.candidato.nome);
       setPdfUrl(urlToView);
+      setPdfFileName(curriculo.nome_arquivo || '');
+      setPdfFileType(curriculo.tipo_arquivo || '');
       setIsPdfViewerOpen(true);
       
     } catch (error) {
@@ -479,7 +483,7 @@ const Curriculos = () => {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por nome, email ou telefone..."
+                  placeholder="Buscar por nome, CARGO, Localização, e-mail, telefone..."
                   className="pl-10"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -549,7 +553,7 @@ const Curriculos = () => {
                     <thead className="bg-muted/50">
                       <tr>
                         <th className="text-left p-3 font-medium">Candidato</th>
-                        <th className="text-left p-3 font-medium">Área</th>
+                        <th className="text-left p-3 font-medium">Cargo</th>
                         <th className="text-left p-3 font-medium">Contato</th>
                         <th className="text-left p-3 font-medium">Localização</th>
                         <th className="text-left p-3 font-medium">Status</th>
@@ -589,7 +593,7 @@ const Curriculos = () => {
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               <Briefcase className="h-4 w-4 text-primary" />
-                              <span className="font-medium">{curriculo.area_atuacao || 'Não informado'}</span>
+                              <span className="font-medium">{curriculo.cargo_interesse || curriculo.area_atuacao || 'Não informado'}</span>
                             </div>
                             {curriculo.formacao && (
                               <div className="text-sm text-muted-foreground mt-1">
@@ -786,9 +790,13 @@ const Curriculos = () => {
             setIsPdfViewerOpen(false);
             setPdfUrl('');
             setPdfCandidateName('');
+            setPdfFileName('');
+            setPdfFileType('');
           }}
           pdfUrl={pdfUrl}
           candidateName={pdfCandidateName}
+          fileName={pdfFileName}
+          fileType={pdfFileType}
         />
       </div>
     </MainLayout>

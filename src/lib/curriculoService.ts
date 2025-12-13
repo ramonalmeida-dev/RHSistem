@@ -97,32 +97,41 @@ export async function saveCurriculoReference(
   fileType: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabase
+    // Truncar nome do arquivo se muito longo (máximo 255 caracteres)
+    const nomeArquivoTruncado = fileName.length > 255 ? fileName.substring(0, 255) : fileName;
+    
+    // Truncar tipo de arquivo se muito longo (máximo 100 caracteres)
+    const tipoArquivoTruncado = fileType && fileType.length > 100 ? fileType.substring(0, 100) : fileType;
+    
+    const { data, error } = await supabase
       .from('curriculos')
       .insert({
         candidato_id: candidatoId,
         vaga_id: vagaId,
-        nome_arquivo: fileName,
+        nome_arquivo: nomeArquivoTruncado,
         url_storage: filePath,
         tamanho_bytes: fileSize,
-        tipo_arquivo: fileType
-      });
+        tipo_arquivo: tipoArquivoTruncado
+      })
+      .select()
+      .single();
 
     if (error) {
       console.error('Erro ao salvar referência:', error);
+      // Retornar mensagem de erro mais específica
       return {
         success: false,
-        error: 'Erro ao salvar referência do currículo.'
+        error: error.message || 'Erro ao salvar referência do currículo.'
       };
     }
 
     return { success: true };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao salvar referência do currículo:', error);
     return {
       success: false,
-      error: 'Erro interno ao salvar referência.'
+      error: error?.message || 'Erro interno ao salvar referência.'
     };
   }
 }

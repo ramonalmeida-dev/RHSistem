@@ -197,7 +197,7 @@ const Index = () => {
           {/* Recent Activity */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Atividades Recentes</CardTitle>
+              <CardTitle className="text-lg font-semibold">Atividades Realizadas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {loading ? (

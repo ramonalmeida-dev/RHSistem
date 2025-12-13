@@ -60,6 +60,7 @@ interface VagaData {
 interface Cliente {
   id: string;
   razao_social: string;
+  nome_fantasia?: string;
 }
 
 interface Usuario {
@@ -150,11 +151,12 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
         // Gerar número da vaga automaticamente
         await gerarNumeroVaga();
         
-        // Carregar clientes
+        // Carregar clientes com nome_fantasia
         const { data: clientesData } = await supabase
           .from('clientes')
-          .select('id, razao_social')
+          .select('id, razao_social, nome_fantasia')
           .eq('ativo', true)
+          .order('nome_fantasia', { ascending: true, nullsFirst: false })
           .order('razao_social');
 
         // Carregar usuários (consultores e admins)
@@ -320,7 +322,7 @@ export function AddVagaModal({ isOpen, onClose, onSubmit }: AddVagaModalProps) {
                   <SelectContent>
                     {clientes.map((cliente) => (
                       <SelectItem key={cliente.id} value={cliente.id}>
-                        {cliente.razao_social}
+                        {cliente.nome_fantasia || cliente.razao_social}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -148,7 +148,6 @@ const Vagas = () => {
   const [vagas, setVagas] = useState<Vaga[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('todas');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -157,6 +156,8 @@ const Vagas = () => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [pdfFileName, setPdfFileName] = useState<string>('');
+  const [pdfFileType, setPdfFileType] = useState<string>('');
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [isEncerrarModalOpen, setIsEncerrarModalOpen] = useState(false);
   const [vagaToEncerrar, setVagaToEncerrar] = useState<Vaga | null>(null);
@@ -165,8 +166,6 @@ const Vagas = () => {
   const [consultorFilter, setConsultorFilter] = useState<string>('todos');
   const [dataInicioFilter, setDataInicioFilter] = useState<string>('');
   const [dataFimFilter, setDataFimFilter] = useState<string>('');
-  const [salarioMinFilter, setSalarioMinFilter] = useState<string>('');
-  const [salarioMaxFilter, setSalarioMaxFilter] = useState<string>('');
   const { toast } = useToast();
 
   // Carregar candidatos de uma vaga específica
@@ -239,22 +238,30 @@ const Vagas = () => {
             .from('vagas_consultores')
             .select(`
               consultor_id,
-              usuarios!inner(nome, email)
+              usuarios!inner(id, nome, email)
             `)
             .eq('vaga_id', vaga.id);
 
           // Se não houver consultores na nova tabela, tentar carregar do consultor_id antigo
-          let consultores = consultoresData?.map(c => c.usuarios) || [];
+          let consultores = consultoresData?.map(c => ({
+            id: c.consultor_id,
+            nome: c.usuarios.nome,
+            email: c.usuarios.email
+          })) || [];
           
           if (consultores.length === 0 && vaga.consultor_id) {
             const { data: consultorAntigo } = await supabase
               .from('usuarios')
-              .select('nome, email')
+              .select('id, nome, email')
               .eq('id', vaga.consultor_id)
               .single();
             
             if (consultorAntigo) {
-              consultores = [consultorAntigo];
+              consultores = [{
+                id: consultorAntigo.id,
+                nome: consultorAntigo.nome,
+                email: consultorAntigo.email
+              }];
             }
           }
 
@@ -298,18 +305,15 @@ const Vagas = () => {
     
     return false;
   }).filter(vaga => {
-    // Filtro por status
-    if (statusFilter !== 'todas' && vaga.status !== statusFilter) return false;
-    
     // Filtro por empresa
     if (empresaFilter !== 'todas' && vaga.empresa_id.toString() !== empresaFilter) return false;
     
     // Filtro por consultor - verifica se algum dos consultores da vaga corresponde ao filtro
     if (consultorFilter !== 'todos') {
+      // Buscar consultores da vaga através da tabela vagas_consultores
       const temConsultor = vaga.consultores?.some(c => {
-        // Buscar o ID do consultor comparando com o nome
-        const consultorEncontrado = consultoresUnicos.find(cu => cu.nome === c.nome);
-        return consultorEncontrado?.id === consultorFilter;
+        // Comparar diretamente com o ID do filtro
+        return c.id === consultorFilter;
       });
       if (!temConsultor) return false;
     }
@@ -317,19 +321,6 @@ const Vagas = () => {
     // Filtro por data de recebimento
     if (dataInicioFilter && vaga.data_recebimento < dataInicioFilter) return false;
     if (dataFimFilter && vaga.data_recebimento > dataFimFilter) return false;
-    
-    // Filtro por salário (extrair números do salário)
-    if (salarioMinFilter || salarioMaxFilter) {
-      const salarioText = vaga.salario.toLowerCase();
-      const numeros = salarioText.match(/\d+/g);
-      if (numeros && numeros.length > 0) {
-        const salarioMin = Math.min(...numeros.map(n => parseInt(n)));
-        const salarioMax = Math.max(...numeros.map(n => parseInt(n)));
-        
-        if (salarioMinFilter && salarioMin < parseInt(salarioMinFilter)) return false;
-        if (salarioMaxFilter && salarioMax > parseInt(salarioMaxFilter)) return false;
-      }
-    }
     
     return true;
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -347,7 +338,7 @@ const Vagas = () => {
   // Resetar página quando mudar filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, empresaFilter, consultorFilter, dataInicioFilter, dataFimFilter, salarioMinFilter, salarioMaxFilter]);
+  }, [searchTerm, empresaFilter, consultorFilter, dataInicioFilter, dataFimFilter]);
 
   // Carregar vagas na montagem do componente
   useEffect(() => {
@@ -384,27 +375,60 @@ const Vagas = () => {
 
   const handleViewCurriculo = async (candidate: Candidate) => {
     try {
-      // Buscar dados do currículo do candidato na tabela banco_curriculos
-      const { data, error } = await supabase
-        .from('banco_curriculos')
-        .select('*')
-        .eq('candidato_id', candidate.id)
-        .single();
+      let data = null;
+      let error = null;
 
-      if (error) {
+      // Primeiro, buscar na tabela curriculos (específica da vaga) se temos vaga selecionada
+      if (selectedVaga?.id) {
+        const { data: curriculoVaga, error: errorVaga } = await supabase
+          .from('curriculos')
+          .select('*')
+          .eq('candidato_id', candidate.id)
+          .eq('vaga_id', selectedVaga.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (!errorVaga && curriculoVaga) {
+          data = curriculoVaga;
+        } else {
+          // Se não encontrou na tabela curriculos, buscar no banco_curriculos
+          const { data: curriculoBanco, error: errorBanco } = await supabase
+            .from('banco_curriculos')
+            .select('*')
+            .eq('candidato_id', candidate.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (!errorBanco && curriculoBanco) {
+            data = curriculoBanco;
+          } else {
+            error = errorBanco;
+          }
+        }
+      } else {
+        // Se não temos vaga selecionada, buscar apenas no banco_curriculos
+        const { data: curriculoBanco, error: errorBanco } = await supabase
+          .from('banco_curriculos')
+          .select('*')
+          .eq('candidato_id', candidate.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (!errorBanco && curriculoBanco) {
+          data = curriculoBanco;
+        } else {
+          error = errorBanco;
+        }
+      }
+
+      if (error || !data) {
         console.error('Erro ao buscar currículo:', error);
         toast({
           title: "Currículo não encontrado",
           description: "Este candidato não possui currículo cadastrado no sistema.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!data) {
-        toast({
-          title: "Currículo não encontrado",
-          description: "Este candidato não possui currículo cadastrado.",
           variant: "destructive",
         });
         return;
@@ -446,6 +470,8 @@ const Vagas = () => {
       // Abrir modal de visualização de PDF
       setSelectedCandidate(candidate);
       setPdfUrl(urlToView);
+      setPdfFileName(data.nome_arquivo || '');
+      setPdfFileType(data.tipo_arquivo || '');
       setIsPdfViewerOpen(true);
       
     } catch (error) {
@@ -547,13 +573,10 @@ const Vagas = () => {
       
       // Limpar filtros para garantir que a nova vaga apareça
       setSearchTerm('');
-      setStatusFilter('todas');
       setEmpresaFilter('todas');
       setConsultorFilter('todos');
       setDataInicioFilter('');
       setDataFimFilter('');
-      setSalarioMinFilter('');
-      setSalarioMaxFilter('');
       setCurrentPage(1);
       
       setIsAddModalOpen(false);
@@ -784,24 +807,18 @@ const Vagas = () => {
   // Funções para filtros avançados
   const clearAllFilters = () => {
     setSearchTerm('');
-    setStatusFilter('todas');
     setEmpresaFilter('todas');
     setConsultorFilter('todos');
     setDataInicioFilter('');
     setDataFimFilter('');
-    setSalarioMinFilter('');
-    setSalarioMaxFilter('');
   };
 
   const hasActiveFilters = () => {
     return searchTerm || 
-           statusFilter !== 'todas' || 
            empresaFilter !== 'todas' || 
            consultorFilter !== 'todos' || 
            dataInicioFilter || 
-           dataFimFilter || 
-           salarioMinFilter || 
-           salarioMaxFilter;
+           dataFimFilter;
   };
 
   // Obter empresas e consultores únicos para filtros
@@ -813,17 +830,14 @@ const Vagas = () => {
     };
   });
 
-  // Extrair todos os consultores únicos de todas as vagas
+  // Extrair todos os consultores únicos de todas as vagas com seus IDs reais
   const todosConsultores = vagas.flatMap(v => 
-    v.consultores?.map(c => ({ nome: c.nome, email: c.email })) || []
+    v.consultores?.map(c => ({ id: c.id, nome: c.nome, email: c.email })) || []
   );
   
   const consultoresUnicos = Array.from(
-    new Map(todosConsultores.map(c => [c.nome, c])).values()
-  ).map((consultor, index) => ({
-    id: `consultor-${index}`,
-    nome: consultor.nome
-  }));
+    new Map(todosConsultores.map(c => [c.id, c])).values()
+  );
 
   return (
     <MainLayout>
@@ -927,25 +941,12 @@ const Vagas = () => {
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="Buscar por cargo, empresa, número da vaga..."
+                        placeholder="Buscar por cargo, empresa, número da vaga, consultor..."
                         className="pl-10"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
                     </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todas">Todos os Status</SelectItem>
-                        <SelectItem value="rascunho">Rascunho</SelectItem>
-                        <SelectItem value="publicada">Publicada</SelectItem>
-                        <SelectItem value="em_analise">Em Análise</SelectItem>
-                        <SelectItem value="pausada">Pausada</SelectItem>
-                        <SelectItem value="encerrada">Encerrada</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <Button 
                       variant="outline" 
                       onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
@@ -1027,30 +1028,6 @@ const Vagas = () => {
                         </div>
                       </div>
 
-                      {/* Filtro por Salário */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-sm">Salário Mínimo (R$)</Label>
-                          <Input
-                            type="number"
-                            value={salarioMinFilter}
-                            onChange={(e) => setSalarioMinFilter(e.target.value)}
-                            placeholder="Ex: 3000"
-                            min="0"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm">Salário Máximo (R$)</Label>
-                          <Input
-                            type="number"
-                            value={salarioMaxFilter}
-                            onChange={(e) => setSalarioMaxFilter(e.target.value)}
-                            placeholder="Ex: 8000"
-                            min="0"
-                          />
-                        </div>
-                      </div>
-
                       {/* Resumo dos Filtros Ativos */}
                       {hasActiveFilters() && (
                         <div className="bg-muted/50 p-3 rounded-lg">
@@ -1058,9 +1035,6 @@ const Vagas = () => {
                           <div className="flex flex-wrap gap-2 text-xs">
                             {searchTerm && (
                               <Badge variant="secondary">Busca: "{searchTerm}"</Badge>
-                            )}
-                            {statusFilter !== 'todas' && (
-                              <Badge variant="secondary">Status: {statusFilter}</Badge>
                             )}
                             {empresaFilter !== 'todas' && (
                               <Badge variant="secondary">
@@ -1077,12 +1051,6 @@ const Vagas = () => {
                             )}
                             {dataFimFilter && (
                               <Badge variant="secondary">Data fim: {dataFimFilter}</Badge>
-                            )}
-                            {salarioMinFilter && (
-                              <Badge variant="secondary">Salário min: R$ {salarioMinFilter}</Badge>
-                            )}
-                            {salarioMaxFilter && (
-                              <Badge variant="secondary">Salário max: R$ {salarioMaxFilter}</Badge>
                             )}
                           </div>
                         </div>
@@ -1108,12 +1076,12 @@ const Vagas = () => {
                     <Briefcase className="h-12 w-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Nenhuma vaga encontrada</h3>
                     <p className="text-muted-foreground text-center mb-4">
-                      {searchTerm || statusFilter !== 'todas'
+                      {searchTerm
                         ? "Nenhuma vaga corresponde aos critérios de busca."
                         : "Comece adicionando sua primeira vaga."
                       }
                     </p>
-                    {!searchTerm && statusFilter === 'todas' && (
+                    {!searchTerm && (
                       <PermissionGuard permissao="vagas_criar">
                         <Button onClick={() => setIsAddModalOpen(true)}>
                           <Plus className="mr-2 h-4 w-4" />
@@ -1356,10 +1324,14 @@ const Vagas = () => {
           onClose={() => {
             setIsPdfViewerOpen(false);
             setPdfUrl('');
+            setPdfFileName('');
+            setPdfFileType('');
             setSelectedCandidate(null);
           }}
           pdfUrl={pdfUrl}
           candidateName={selectedCandidate?.name || ''}
+          fileName={pdfFileName}
+          fileType={pdfFileType}
         />
 
         {/* Modal de Confirmação para Encerrar Vaga */}

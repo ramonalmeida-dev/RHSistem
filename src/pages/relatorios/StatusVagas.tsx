@@ -99,7 +99,7 @@ export default function StatusVagas() {
   const { isConsultor, podeVerTodasVagas } = usePermissions();
   
   const [vagasStatus, setVagasStatus] = useState<VagaStatusRelatorio[]>([]);
-  const [empresas, setEmpresas] = useState<Array<{id: string, razao_social: string}>>([]);
+  const [empresas, setEmpresas] = useState<Array<{id: string, razao_social: string, nome_fantasia?: string}>>([]);
   const [consultores, setConsultores] = useState<Array<{id: string, nome: string}>>([]);
   const [loading, setLoading] = useState(true);
   const [exportLoading, setExportLoading] = useState(false);
@@ -307,7 +307,7 @@ export default function StatusVagas() {
                     <SelectItem value="todas">Todas as empresas</SelectItem>
                     {empresas.map((empresa) => (
                       <SelectItem key={empresa.id} value={empresa.id}>
-                        {empresa.razao_social}
+                        {empresa.nome_fantasia || empresa.razao_social}
                       </SelectItem>
                     ))}
                   </SelectContent>

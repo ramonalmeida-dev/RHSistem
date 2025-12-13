@@ -18,6 +18,8 @@ export interface VagaStatusRelatorio {
   id: string;
   numero_vaga: string;
   empresa_nome: string;
+  empresa_razao_social?: string;
+  empresa_nome_fantasia?: string | null;
   cargo: string;
   consultor_nome: string; // Novo campo
   salario?: string; // Novo campo
@@ -58,7 +60,7 @@ export class StatusVagasService {
           status,
           data_inicio_selecao,
           data_envio_curriculos,
-          empresa:clientes(id, razao_social),
+          empresa:clientes(id, razao_social, nome_fantasia),
           consultor:usuarios(id, nome)
         `)
         .in('status', ['publicada', 'em_analise', 'pausada', 'encerrada']);
@@ -95,6 +97,7 @@ export class StatusVagasService {
         vagasData.map(async (vaga) => {
           try {
             // Buscar candidatos do kanban para esta vaga com JOIN na tabela candidatos
+            // Filtrar apenas candidatos que estão em entrevista na empresa (status 'entrevista_agendada')
             const { data: candidatosData, error: candidatosError } = await supabase
               .from('candidatos_vagas')
               .select(`
@@ -105,7 +108,8 @@ export class StatusVagasService {
                 observacoes,
                 candidatos(nome)
               `)
-              .eq('vaga_id', vaga.id);
+              .eq('vaga_id', vaga.id)
+              .eq('status_atual', 'entrevista_agendada');
 
             if (candidatosError) {
               console.error('Erro ao buscar candidatos:', candidatosError);
@@ -147,7 +151,9 @@ export class StatusVagasService {
             return {
               id: vaga.id,
               numero_vaga: vaga.numero_vaga,
-              empresa_nome: (vaga.empresa as any)?.razao_social || 'N/A',
+              empresa_nome: (vaga.empresa as any)?.nome_fantasia || (vaga.empresa as any)?.razao_social || 'N/A',
+              empresa_razao_social: (vaga.empresa as any)?.razao_social || 'N/A',
+              empresa_nome_fantasia: (vaga.empresa as any)?.nome_fantasia || null,
               cargo: vaga.cargo,
               consultor_nome: (vaga.consultor as any)?.nome || 'N/A',
               salario: (vaga as any).salario,
@@ -179,7 +185,9 @@ export class StatusVagasService {
             return {
               id: vaga.id,
               numero_vaga: vaga.numero_vaga,
-              empresa_nome: (vaga.empresa as any)?.razao_social || 'N/A',
+              empresa_nome: (vaga.empresa as any)?.nome_fantasia || (vaga.empresa as any)?.razao_social || 'N/A',
+              empresa_razao_social: (vaga.empresa as any)?.razao_social || 'N/A',
+              empresa_nome_fantasia: (vaga.empresa as any)?.nome_fantasia || null,
               cargo: vaga.cargo,
               consultor_nome: (vaga.consultor as any)?.nome || 'N/A',
               salario: (vaga as any).salario,
@@ -194,7 +202,14 @@ export class StatusVagasService {
         })
       );
 
-      return vagasComCandidatos;
+      // Ordenar vagas por numero_vaga (crescente)
+      const vagasOrdenadas = vagasComCandidatos.sort((a, b) => {
+        const numA = parseInt(a.numero_vaga) || 0;
+        const numB = parseInt(b.numero_vaga) || 0;
+        return numA - numB;
+      });
+
+      return vagasOrdenadas;
       
     } catch (error) {
       throw error;
@@ -327,6 +342,25 @@ export class StatusVagasService {
       acc[empresa].push(vaga);
       return acc;
     }, {} as Record<string, VagaStatusRelatorio[]>);
+
+    // Ordenar empresas por nome_fantasia (alfabético), com fallback para razao_social
+    const empresasOrdenadas = Object.keys(vagasPorEmpresa).sort((a, b) => {
+      // Buscar nome_fantasia das vagas para ordenação
+      const vagaA = vagasPorEmpresa[a][0];
+      const vagaB = vagasPorEmpresa[b][0];
+      const nomeA = (vagaA?.empresa_nome_fantasia || vagaA?.empresa_razao_social || a || '').toLowerCase();
+      const nomeB = (vagaB?.empresa_nome_fantasia || vagaB?.empresa_razao_social || b || '').toLowerCase();
+      return nomeA.localeCompare(nomeB, 'pt-BR');
+    });
+
+    // Ordenar vagas de cada empresa por numero_vaga (crescente)
+    empresasOrdenadas.forEach(empresa => {
+      vagasPorEmpresa[empresa].sort((a, b) => {
+        const numA = parseInt(a.numero_vaga) || 0;
+        const numB = parseInt(b.numero_vaga) || 0;
+        return numA - numB;
+      });
+    });
 
     // Criar HTML para o relatório
     let htmlContent = `
@@ -484,8 +518,9 @@ export class StatusVagasService {
           </div>
       `;
 
-      // Para cada empresa
-      Object.entries(vagasPorEmpresa).forEach(([empresa, vagasEmpresa]) => {
+      // Para cada empresa (já ordenadas por nome_fantasia)
+      empresasOrdenadas.forEach((empresa) => {
+        const vagasEmpresa = vagasPorEmpresa[empresa];
         htmlContent += `
           <div class="company-section">
             <div class="company-title">STATUS DE VAGAS – ${empresa}</div>
@@ -692,20 +727,26 @@ export class StatusVagasService {
     }
   }
 
-  static async getEmpresas(): Promise<Array<{id: string, razao_social: string}>> {
+  static async getEmpresas(): Promise<Array<{id: string, razao_social: string, nome_fantasia?: string}>> {
     try {
       const { data, error } = await supabase
         .from('clientes')
-        .select('id, razao_social')
-        .eq('ativo', true)
-        .order('razao_social');
+        .select('id, razao_social, nome_fantasia')
+        .eq('ativo', true);
 
       if (error) {
         console.error('Erro ao buscar empresas:', error);
         throw new Error(`Erro ao buscar empresas: ${error.message}`);
       }
 
-      return data || [];
+      // Ordenar por nome_fantasia (alfabético), com fallback para razao_social
+      const empresasOrdenadas = (data || []).sort((a, b) => {
+        const nomeA = (a.nome_fantasia || a.razao_social || '').toLowerCase();
+        const nomeB = (b.nome_fantasia || b.razao_social || '').toLowerCase();
+        return nomeA.localeCompare(nomeB, 'pt-BR');
+      });
+
+      return empresasOrdenadas;
     } catch (error) {
       console.error('Erro ao buscar empresas:', error);
       throw error;

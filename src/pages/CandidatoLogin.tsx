@@ -6,7 +6,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
-import { Loader2, Mail, Lock, UserPlus } from 'lucide-react';
+import { Loader2, Mail, Lock, UserPlus, KeyRound } from 'lucide-react';
 
 const CandidatoLogin: React.FC = () => {
   const navigate = useNavigate();
@@ -85,7 +85,17 @@ const CandidatoLogin: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="senha">Senha</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="senha">Senha</Label>
+                <button
+                  type="button"
+                  onClick={() => navigate('/candidato/recuperar-senha', { state: { returnUrl } })}
+                  className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                  disabled={loading || submitting}
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -9,10 +10,13 @@ import { Loader2, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 
 const CandidatoRecuperarSenha: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const returnUrl = location.state?.returnUrl || '/candidato/login';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,15 +24,32 @@ const CandidatoRecuperarSenha: React.FC = () => {
     setError(null);
 
     try {
-      // Simular envio de email (em produção, integrar com Supabase Auth)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Em produção, usar:
-      // const { error } = await supabase.auth.resetPasswordForEmail(email);
-      // if (error) throw error;
-      
-      setEnviado(true);
-    } catch (error) {
+      // Verificar se o email existe na tabela de candidatos_externos
+      const { data: candidato, error: candidatoError } = await supabase
+        .from('candidatos_externos')
+        .select('id, email')
+        .eq('email', email.trim().toLowerCase())
+        .single();
+
+      if (candidatoError || !candidato) {
+        // Mesmo que não encontre, não revelar isso por segurança
+        // Mas ainda enviar o email de reset se o usuário existir no auth
+        console.log('Candidato não encontrado ou erro:', candidatoError);
+      }
+
+      // Enviar email de recuperação de senha via Supabase Auth
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        redirectTo: `${window.location.origin}/candidato/redefinir-senha`,
+      });
+
+      if (resetError) {
+        console.error('Erro ao enviar email de recuperação:', resetError);
+        // Não revelar se o email existe ou não por segurança
+        setError('Erro ao enviar email de recuperação. Verifique se o email está correto e tente novamente.');
+      } else {
+        setEnviado(true);
+      }
+    } catch (error: any) {
       console.error('Erro ao enviar email:', error);
       setError('Erro ao enviar email de recuperação. Tente novamente.');
     } finally {
@@ -37,7 +58,7 @@ const CandidatoRecuperarSenha: React.FC = () => {
   };
 
   const handleVoltar = () => {
-    navigate('/candidato/login');
+    navigate('/candidato/login', { state: { returnUrl } });
   };
 
   if (enviado) {

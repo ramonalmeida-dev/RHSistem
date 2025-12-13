@@ -170,7 +170,7 @@ export function EditCandidatoModal({ isOpen, onClose, onSuccess, candidato, curr
     }
 
     if (!curriculoData.area_atuacao.trim()) {
-      newErrors.area_atuacao = "Área de atuação é obrigatória";
+      newErrors.area_atuacao = "Cargo é obrigatório";
     }
 
     if (curriculoData.experiencia_anos < 0) {
@@ -380,7 +380,7 @@ export function EditCandidatoModal({ isOpen, onClose, onSuccess, candidato, curr
               <div className="space-y-2">
                 <Label htmlFor="area_atuacao" className="flex items-center gap-2">
                   <Briefcase className="h-4 w-4" />
-                  Área de Atuação *
+                  Cargo *
                 </Label>
                 <Input
                   id="area_atuacao"

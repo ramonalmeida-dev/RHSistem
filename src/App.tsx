@@ -20,6 +20,7 @@ import VagaPublica from "./pages/VagaPublica";
 import CandidatoLogin from "./pages/CandidatoLogin";
 import CandidatoRegister from "./pages/CandidatoRegister";
 import CandidatoRecuperarSenha from "./pages/CandidatoRecuperarSenha";
+import CandidatoRedefinirSenha from "./pages/CandidatoRedefinirSenha";
 
 import NotFound from "./pages/NotFound";
 
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/candidato/login" element={<CandidatoLogin />} />
               <Route path="/candidato/register" element={<CandidatoRegister />} />
               <Route path="/candidato/recuperar-senha" element={<CandidatoRecuperarSenha />} />
+              <Route path="/candidato/redefinir-senha" element={<CandidatoRedefinirSenha />} />
               
               {/* Rotas protegidas do sistema administrativo */}
               <Route path="/" element={

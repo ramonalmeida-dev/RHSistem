@@ -216,8 +216,6 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
 
     if (!formData.numero.trim()) {
       newErrors.numero = "Número é obrigatório";
-    } else if (!/^\d+$/.test(formData.numero)) {
-      newErrors.numero = "Número deve conter apenas dígitos";
     }
 
     if (!formData.bairro.trim()) {
@@ -465,7 +463,7 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
               </Label>
               <Input
                 id="numero"
-                placeholder="123"
+                placeholder="123 ou S/Nº"
                 value={formData.numero}
                 onChange={(e) => handleInputChange("numero", e.target.value)}
                 className={errors.numero ? "border-destructive" : ""}
@@ -482,7 +480,7 @@ export function AddClienteModal({ isOpen, onClose, onSubmit }: AddClienteModalPr
               </Label>
               <Input
                 id="complemento"
-                placeholder="Apto 101, Sala 2"
+                placeholder=""
                 value={formData.complemento}
                 onChange={(e) => handleInputChange("complemento", e.target.value)}
               />
